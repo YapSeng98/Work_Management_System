@@ -1,0 +1,56 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
+:root {
+  --bg: #f4f2ee;
+  --card: #ffffff;
+  --border: #e4e1d9;
+  --divider: #f0eee8;
+  --text: #1c1c1a;
+  --text-muted: #55534c;
+  --text-faint: #8a8880;
+
+  --accent: #a4432b;
+  --accent-strong: #7d3120;
+  --accent-tint: #fbf2ec;
+  --accent-tint-border: #f0ddce;
+
+  --do-bg: #f7e4de;
+  --do-text: #a4432b;
+  --schedule-bg: #e2e7f5;
+  --schedule-text: #3d4f8f;
+  --delegate-bg: #ece3f5;
+  --delegate-text: #6b4f9e;
+  --later-bg: #ececea;
+  --later-text: #6b6d72;
+
+  --badge-warn-bg: #fbeecb;
+  --badge-warn-text: #8a6d1f;
+  --badge-urgent-bg: #f7e4de;
+  --badge-urgent-text: #a4432b;
+
+  --font-sans: "IBM Plex Sans", -apple-system, "system-ui", "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+a {
+  color: var(--accent);
+}
+a:hover {
+  color: var(--accent-strong);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
