@@ -10,12 +10,25 @@ export function ConfirmDialog({
 }: {
   task: CandidateTask;
   onCancel: () => void;
-  onConfirm: (edited: { title: string; quadrant: Quadrant; due: string; project: string }) => void;
+  onConfirm: (edited: { title: string; quadrant: Quadrant; due: string; project: string }) => Promise<void>;
 }) {
   const [title, setTitle] = useState(task.title);
   const [quadrant, setQuadrant] = useState<Quadrant>(task.quadrant);
   const [due, setDue] = useState(task.suggestedDue);
   const [project, setProject] = useState(task.suggestedProject);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    setSaving(true);
+    setError(null);
+    try {
+      await onConfirm({ title: title.trim(), quadrant, due, project });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setSaving(false);
+    }
+  }
 
   return (
     <div
@@ -29,7 +42,7 @@ export function ConfirmDialog({
         padding: 24,
         zIndex: 50,
       }}
-      onClick={onCancel}
+      onClick={saving ? undefined : onCancel}
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -124,6 +137,12 @@ export function ConfirmDialog({
 
         <div style={{ height: 1, background: "var(--divider)", marginTop: 4 }} />
 
+        {error && (
+          <div style={{ fontSize: 13, color: "var(--do-text)" }}>
+            Couldn't add to Planner: {error}
+          </div>
+        )}
+
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
           <button
             onClick={onCancel}
@@ -140,8 +159,10 @@ export function ConfirmDialog({
             Cancel
           </button>
           <button
-            onClick={() => onConfirm({ title, quadrant, due, project })}
+            onClick={submit}
+            disabled={saving || !title.trim()}
             style={{
+              opacity: saving || !title.trim() ? 0.6 : 1,
               display: "flex",
               alignItems: "center",
               gap: 7,
@@ -155,7 +176,7 @@ export function ConfirmDialog({
             }}
           >
             <CheckIcon size={14} color="var(--bg)" />
-            Confirm &amp; add to Planner
+            {saving ? "Adding…" : "Confirm & add to Planner"}
           </button>
         </div>
       </div>

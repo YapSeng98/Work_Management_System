@@ -1,32 +1,42 @@
-# React + TypeScript + Vite
+# Daily Brief
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A morning digest of your Outlook mail and calendar — meetings, flagged emails,
+threads awaiting your reply — plus candidate tasks drafted from email that you
+triage into Personal-Planning (Planner) with one click.
 
-Currently, two official plugins are available:
+## Run it
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # type-check + production build
+npm run lint
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## How it's put together
+
+| Path | What it does |
+| --- | --- |
+| `src/App.tsx` | Page shell: Today / History tabs, triage handlers |
+| `src/api/digestClient.ts` | `fetchDigest()` — **stub**, returns mock data |
+| `src/api/plannerClient.ts` | `createTaskInPlanner()` — **stub**, logs instead of POSTing |
+| `src/lib/storage.ts` | Persists history and triage decisions in localStorage |
+| `src/data/mock.ts` | Sample digest and seed history |
+| `src/components/` | Cards, candidate task row, confirm dialog, history view |
+
+### Triage behaviour
+
+- **Add** opens the confirm dialog; on success the task goes to Planner and the
+  candidate is hidden for good. If Planner fails, the dialog stays open with the error.
+- **Snooze** hides the candidate until tomorrow.
+- **Dismiss** hides it for good.
+
+Every action is logged to History. Both survive a page reload.
+
+## Not done yet
+
+- **Real Planner integration** — needs the `pps/auth` contract and the `task`
+  table schema from the Planner repo; replace the body of `createTaskInPlanner`.
+- **Real Outlook data** — replace the body of `fetchDigest`; the data source
+  (e.g. Microsoft Graph) is still to be decided.
+- Due and Project options in the confirm dialog are hard-coded; they should come from Planner.
