@@ -1,17 +1,8 @@
 import { useState } from "react";
 import { AI_INSTRUCTIONS, type ParsedBrief } from "../lib/brief";
 import { Card, SectionHeader } from "./Card";
-import { MailIcon } from "./icons";
-
-const buttonStyle: React.CSSProperties = {
-  fontSize: 12.5,
-  fontWeight: 600,
-  padding: "7px 12px",
-  borderRadius: 7,
-  border: "1.5px solid var(--border)",
-  background: "var(--card)",
-  color: "var(--text-muted)",
-};
+import { CopyIcon, SparklesIcon } from "./icons";
+import { Pill } from "./Pill";
 
 /**
  * Paste box for the daily brief. Analysis happens as soon as text is pasted
@@ -62,26 +53,31 @@ export function BriefImportCard({
   const team = brief?.items.filter((i) => i.owner === "team").length ?? 0;
   const chase = brief?.items.filter((i) => i.owner === "others").length ?? 0;
 
+  const formatLabel = { json: "Structured data", ownership: "Ownership report", executive: "Executive report", daily: "Daily brief" };
+
   return (
-    <Card>
+    <Card ai={open}>
       <SectionHeader
-        icon={<MailIcon size={14} />}
-        label="Paste brief"
+        ai
+        icon={<SparklesIcon size={15} />}
+        label={open ? "Paste your brief" : "Today's brief"}
+        hint={open ? "AI sorts it instantly: yours, your team's, and waiting on customer. Nothing to click." : undefined}
         right={
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "flex-end" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
             <button
-              style={buttonStyle}
+              className="btn"
               onClick={copyInstructions}
               title="Add these to the end of your AI prompt so the report includes data this app reads exactly"
             >
+              <CopyIcon size={13} />
               {copied ? "Copied ✓" : "Copy AI instructions"}
             </button>
             {brief && (
               <>
-                <button style={buttonStyle} onClick={() => setEditing((e) => !e)}>
+                <button className="btn" onClick={() => setEditing((e) => !e)}>
                   {editing ? "Cancel" : "Paste new brief"}
                 </button>
-                <button style={buttonStyle} onClick={onClear}>
+                <button className="btn" onClick={onClear}>
                   Clear
                 </button>
               </>
@@ -90,36 +86,26 @@ export function BriefImportCard({
         }
       />
       {brief && !editing && (
-        <div style={{ fontSize: 14, color: "var(--text-muted)" }}>
-          <strong style={{ color: "var(--text)" }}>{brief.title}</strong> — {mine} pending you,
-          {team ? ` ${team} owned by your team,` : ""} {chase} waiting on others
-          {brief.meetings.length ? `, ${brief.meetings.length} meetings` : ""}.
-          <span style={{ color: "var(--text-faint)" }}>
-            {" "}
-            {brief.format === "json" ? "Read from the structured data block." : "Read from the report text."}
-          </span>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 600 }}>{brief.title}</span>
+          <Pill dot label={`${mine} pending you`} bg="var(--do-bg)" color="var(--do-text)" />
+          {team > 0 && <Pill dot label={`${team} your team`} bg="var(--delegate-bg)" color="var(--delegate-text)" />}
+          <Pill dot label={`${chase} waiting on others`} bg="var(--schedule-bg)" color="var(--schedule-text)" />
+          {brief.meetings.length > 0 && <Pill dot label={`${brief.meetings.length} meetings`} bg="var(--later-bg)" color="var(--later-text)" />}
+          <span style={{ fontSize: 12, color: "var(--text-faint)" }}>· read from {formatLabel[brief.format].toLowerCase()}</span>
         </div>
       )}
       {open && (
         <>
-          <textarea
-            value={draft}
-            onChange={(e) => handleChange(e.target.value)}
-            placeholder="Paste today's Daily Work Brief here — it's analysed automatically and saved to your account."
-            rows={6}
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              resize: "vertical",
-              border: "1.5px solid var(--border)",
-              borderRadius: 8,
-              padding: "10px 12px",
-              fontSize: 13.5,
-              fontFamily: "inherit",
-              background: "var(--bg)",
-              color: "var(--text)",
-            }}
-          />
+          <div className="composer">
+            <textarea
+              value={draft}
+              onChange={(e) => handleChange(e.target.value)}
+              placeholder="Paste today's brief from your AI assistant here…"
+              rows={6}
+              autoFocus={editing}
+            />
+          </div>
           {error && <div style={{ fontSize: 13, color: "var(--do-text)" }}>{error}</div>}
         </>
       )}

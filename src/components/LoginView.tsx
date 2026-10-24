@@ -2,17 +2,7 @@ import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import { shadowEmail } from "../lib/planner";
 import { Card } from "./Card";
-import { MailIcon } from "./icons";
-
-const inputStyle: React.CSSProperties = {
-  border: "1.5px solid var(--border)",
-  borderRadius: 8,
-  padding: "10px 12px",
-  fontSize: 14,
-  fontFamily: "inherit",
-  background: "var(--card)",
-  color: "var(--text)",
-};
+import { SparklesIcon } from "./icons";
 
 /**
  * Sign in with the Planner account (same Supabase project): username + password,
@@ -36,10 +26,10 @@ export function LoginView() {
 
   return (
     <Shell>
-      <Card>
+      <Card style={{ padding: 26 }}>
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ fontSize: 16, fontWeight: 700 }}>Sign in</div>
-          <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: -6 }}>Use your Planner username and password.</div>
+          <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em" }}>Welcome back</div>
+          <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: -8 }}>Use your Planner username and password.</div>
           <input
             autoComplete="username"
             autoCapitalize="none"
@@ -47,7 +37,7 @@ export function LoginView() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            style={inputStyle}
+            className="input"
           />
           <input
             type="password"
@@ -56,23 +46,10 @@ export function LoginView() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={inputStyle}
+            className="input"
           />
           {error && <div style={{ fontSize: 13, color: "var(--do-text)" }}>{error}</div>}
-          <button
-            type="submit"
-            disabled={busy}
-            style={{
-              fontSize: 13.5,
-              fontWeight: 600,
-              color: "var(--bg)",
-              background: "var(--text)",
-              padding: "10px 16px",
-              borderRadius: 8,
-              border: "none",
-              opacity: busy ? 0.6 : 1,
-            }}
-          >
+          <button type="submit" disabled={busy} className="btn btn-primary" style={{ padding: "11px 16px", fontSize: 14 }}>
             {busy ? "Signing in…" : "Sign in"}
           </button>
         </form>
@@ -98,12 +75,17 @@ export function SetupNotice() {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, boxSizing: "border-box" }}>
-      <div style={{ width: "100%", maxWidth: 380, display: "flex", flexDirection: "column", gap: 18 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "center" }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--text)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <MailIcon size={18} color="var(--bg)" />
+      <div style={{ width: "100%", maxWidth: 380, display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}>
+          <span className="icon-tile icon-tile--ai" style={{ width: 48, height: 48, borderRadius: 14 }}>
+            <SparklesIcon size={24} />
+          </span>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>
+              Daily <span className="gradient-text">Brief</span>
+            </div>
+            <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Your AI work triage, synced with your Planner</div>
           </div>
-          <div style={{ fontSize: 17, fontWeight: 700 }}>Daily Brief</div>
         </div>
         {children}
       </div>

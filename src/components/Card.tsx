@@ -1,40 +1,39 @@
-import type { PropsWithChildren, ReactNode } from "react";
+import type { CSSProperties, PropsWithChildren, ReactNode } from "react";
 
-export function Card({ children }: PropsWithChildren) {
+/** Glass card. `ai` adds the gradient border used for AI-generated content. */
+export function Card({ children, ai, style }: PropsWithChildren<{ ai?: boolean; style?: CSSProperties }>) {
   return (
-    <div
-      style={{
-        background: "var(--card)",
-        border: "1px solid var(--border)",
-        borderRadius: 12,
-        padding: "22px 24px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 14,
-      }}
-    >
+    <div className={`card rise${ai ? " card-ai" : ""}`} style={style}>
       {children}
     </div>
   );
 }
 
-export function SectionHeader({ icon, label, right }: { icon: ReactNode; label: string; right?: ReactNode }) {
+export function SectionHeader({
+  icon,
+  label,
+  right,
+  count,
+  ai,
+  hint,
+}: {
+  icon: ReactNode;
+  label: string;
+  right?: ReactNode;
+  count?: number;
+  ai?: boolean;
+  hint?: string;
+}) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-faint)" }}>
-        {icon}
-        <span
-          style={{
-            fontSize: 11,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            fontWeight: 600,
-          }}
-        >
-          {label}
-        </span>
+    <div className="section-title">
+      <div className="section-title__label">
+        <span className={`icon-tile${ai ? " icon-tile--ai" : ""}`}>{icon}</span>
+        <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.3 }}>
+          <span>{label}</span>
+          {hint && <span style={{ fontSize: 12, fontWeight: 400, color: "var(--text-faint)" }}>{hint}</span>}
+        </div>
       </div>
-      {right}
+      {right ?? (count !== undefined && <span className="count">{count}</span>)}
     </div>
   );
 }

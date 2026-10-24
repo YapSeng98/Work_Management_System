@@ -223,14 +223,13 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
       style={{
         width: "100%",
         minHeight: "100vh",
-        background: "var(--bg)",
-        padding: "clamp(16px, 5vw, 48px)",
+        padding: "clamp(12px, 4vw, 40px) clamp(12px, 4vw, 40px) 64px",
         boxSizing: "border-box",
         display: "flex",
         justifyContent: "center",
       }}
     >
-      <div style={{ width: "100%", maxWidth: 960, display: "flex", flexDirection: "column", gap: 28 }}>
+      <div style={{ width: "100%", maxWidth: 980, display: "flex", flexDirection: "column", gap: 18 }}>
         <Header
           tab={tab}
           onTabChange={setTab}
@@ -239,24 +238,28 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
           onSignOut={onSignOut}
           status={
             brief
-              ? `brief ${brief.date?.toLocaleDateString(undefined, { day: "numeric", month: "short" }) ?? "loaded"}`
-              : "no brief yet"
+              ? `Brief · ${brief.date?.toLocaleDateString(undefined, { day: "numeric", month: "short" }) ?? shortDate(current!.briefDate)}`
+              : "No brief yet"
           }
         />
 
         {error && (
-          <Card>
+          <Card style={{ borderColor: "var(--badge-urgent-text)" }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 12, fontSize: 14, color: "var(--do-text)" }}>
               <div style={{ flex: 1 }}>{error}</div>
-              <button onClick={() => setError(null)} title="Dismiss" style={{ background: "none", border: "none", color: "var(--text-faint)" }}>
-                <XIcon size={13} />
+              <button className="btn btn-icon" onClick={() => setError(null)} title="Dismiss" aria-label="Dismiss" style={{ width: 26, height: 26 }}>
+                <XIcon size={12} />
               </button>
             </div>
           </Card>
         )}
 
         {loading ? (
-          <div style={{ fontSize: 14, color: "var(--text-faint)" }}>Loading your data…</div>
+          <div className="card" style={{ alignItems: "center", padding: 32 }}>
+            <span className="shimmer-text" style={{ fontSize: 15, fontWeight: 600 }}>
+              Loading your brief…
+            </span>
+          </div>
         ) : tab === "history" ? (
           <HistoryView
             entries={history}
@@ -277,17 +280,14 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
                   <div style={{ flex: 1 }}>
                     Viewing a past brief from <strong style={{ color: "var(--text)" }}>{shortDate(current.briefDate)}</strong>.
                   </div>
-                  <button
-                    onClick={() => setViewingId(null)}
-                    style={{ fontSize: 12.5, fontWeight: 600, padding: "6px 12px", borderRadius: 7, border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--text-muted)" }}
-                  >
+                  <button className="btn" onClick={() => setViewingId(null)}>
                     Back to latest
                   </button>
                 </div>
               </Card>
             )}
             {storeMode === "local" && (
-              <div style={{ fontSize: 12.5, color: "var(--text-faint)" }}>
+              <div style={{ fontSize: 12.5, color: "var(--text-faint)", padding: "0 6px" }}>
                 Planner sync is on. Pasted briefs and history are kept in this browser until{" "}
                 <code>supabase/schema.sql</code> is run in the Planner's Supabase project.
               </div>

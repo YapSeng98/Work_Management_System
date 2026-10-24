@@ -5,22 +5,17 @@ import type { Meeting } from "../types";
 export function MeetingsCard({ meetings }: { meetings: Meeting[] }) {
   return (
     <Card>
-      <SectionHeader icon={<CalendarIcon />} label="Meetings" />
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        {meetings.map((m, i) => (
-          <div
-            key={m.id}
-            style={{
-              display: "flex",
-              gap: 16,
-              padding: "11px 0",
-              borderBottom: i < meetings.length - 1 ? "1px solid var(--divider)" : "none",
-            }}
-          >
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--text-faint)", minWidth: 64, flex: "none", whiteSpace: "nowrap" }}>
-              {m.time}
-            </div>
-            <div style={{ fontSize: 14 }}>{m.title}</div>
+      <SectionHeader icon={<CalendarIcon size={15} />} label="Meetings" count={meetings.length} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {meetings.map((m) => (
+          <div key={m.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 10px", borderRadius: 10, background: "var(--divider)" }}>
+            <span
+              className="chip"
+              style={{ background: "var(--schedule-bg)", color: "var(--schedule-text)", fontFamily: "var(--font-mono)", fontWeight: 500 }}
+            >
+              {m.time || "—"}
+            </span>
+            <div style={{ fontSize: 13.5 }}>{m.title}</div>
           </div>
         ))}
       </div>

@@ -1,17 +1,18 @@
+import { useState } from "react";
 import { quadrantLabel, quadrantStyle } from "../quadrant";
 import type { BriefItem } from "../lib/brief";
-import { CheckIcon, XIcon } from "./icons";
+import { ArrowRightIcon, CheckIcon, CopyIcon, SparklesIcon, XIcon } from "./icons";
 import { Pill } from "./Pill";
 
+/** new = not taken; taken = an open task covers it; done = taken before and completed. */
+export type ItemStatus = "new" | "taken" | "done";
+
 const priorityStyle = {
-  critical: { bg: "var(--do-text)", color: "#fff" },
+  critical: { bg: "var(--critical-bg)", color: "#fff" },
   high: { bg: "var(--badge-urgent-bg)", color: "var(--badge-urgent-text)" },
   medium: { bg: "var(--badge-warn-bg)", color: "var(--badge-warn-text)" },
   low: { bg: "var(--later-bg)", color: "var(--later-text)" },
 };
-
-/** new = not taken; taken = an open task covers it; done = taken before and completed. */
-export type ItemStatus = "new" | "taken" | "done";
 
 const kindLabel = {
   reply: "Needs reply",
@@ -21,16 +22,17 @@ const kindLabel = {
   fyi: "FYI",
 };
 
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 export function BriefItemRow({
   item,
-  isLast,
   status,
   since,
   onTake,
   onDismiss,
 }: {
   item: BriefItem;
-  isLast: boolean;
+  isLast?: boolean;
   status: ItemStatus;
   since?: string;
   onTake?: () => void;
@@ -40,117 +42,104 @@ export function BriefItemRow({
   const taken = status === "taken";
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 14,
-        alignItems: "flex-start",
-        padding: "14px 0",
-        borderBottom: isLast ? "none" : "1px solid var(--divider)",
-        opacity: taken ? 0.6 : 1,
-      }}
-    >
-      <div style={{ flex: "1 1 280px", minWidth: 0, display: "flex", flexDirection: "column", gap: 5 }}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          <Pill label={quadrantLabel[item.quadrant].toUpperCase()} bg={q.bg} color={q.text} />
-          {item.kind !== "fyi" && <Pill label={item.priority.toUpperCase()} {...priorityStyle[item.priority]} />}
-          {item.topRank && <Pill label={`TOP #${item.topRank}`} bg="var(--accent-tint)" color="var(--accent)" />}
-          {item.escalation && <Pill label="ESCALATION" bg="var(--do-text)" color="#fff" />}
+    <div className="item" style={{ opacity: taken ? 0.62 : 1 }}>
+      <span className="item__bar" style={{ background: q.text }} />
+      <div style={{ flex: "1 1 300px", minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+          <Pill dot label={quadrantLabel[item.quadrant]} bg={q.bg} color={q.text} />
+          {item.kind !== "fyi" && <Pill label={cap(item.priority)} {...priorityStyle[item.priority]} />}
+          {item.topRank && <Pill label={`Top ${item.topRank}`} bg="var(--accent-tint)" color="var(--accent)" />}
+          {item.escalation && <Pill label="Escalation" bg="var(--critical-bg)" color="#fff" />}
           {(item.risk === "critical" || item.risk === "high") && (
-            <Pill label={`RISK ${item.risk.toUpperCase()}`} {...priorityStyle[item.risk === "critical" ? "high" : "medium"]} />
+            <Pill label={`${cap(item.risk)} risk`} {...priorityStyle[item.risk === "critical" ? "high" : "medium"]} />
           )}
-          {item.personal && <Pill label="FOR YOU" bg="var(--schedule-bg)" color="var(--schedule-text)" />}
-          {item.waitingSince && <Pill label={`WAITING SINCE ${item.waitingSince.toUpperCase()}`} bg="var(--badge-warn-bg)" color="var(--badge-warn-text)" />}
-          {item.waitingOnCustomer && <Pill label="AWAITING CUSTOMER" bg="var(--delegate-bg)" color="var(--delegate-text)" />}
-          {item.canClose && <Pill label="CAN CLOSE" bg="var(--later-bg)" color="var(--later-text)" />}
-          {item.due && <Pill label={`DUE ${item.due.toUpperCase()}`} bg="var(--badge-urgent-bg)" color="var(--badge-urgent-text)" />}
-          {since && <Pill label={`PENDING SINCE ${since.toUpperCase()}`} bg="var(--badge-warn-bg)" color="var(--badge-warn-text)" />}
-          {status === "done" && <Pill label="DONE BEFORE" bg="var(--later-bg)" color="var(--later-text)" />}
+          {item.due && <Pill label={`Due ${item.due.toLowerCase()}`} bg="var(--badge-urgent-bg)" color="var(--badge-urgent-text)" />}
+          {item.personal && <Pill label="For you" bg="var(--schedule-bg)" color="var(--schedule-text)" />}
+          {item.waitingSince && <Pill label={`Waiting since ${item.waitingSince}`} bg="var(--badge-warn-bg)" color="var(--badge-warn-text)" />}
+          {since && <Pill label={`Pending since ${since}`} bg="var(--badge-warn-bg)" color="var(--badge-warn-text)" />}
+          {item.waitingOnCustomer && <Pill label="Awaiting customer" bg="var(--delegate-bg)" color="var(--delegate-text)" />}
+          {item.canClose && <Pill label="Can close" bg="var(--later-bg)" color="var(--success)" />}
+          {status === "done" && <Pill label="Done before" bg="var(--later-bg)" color="var(--later-text)" />}
         </div>
-        <div style={{ fontSize: 14.5, fontWeight: 600, overflowWrap: "anywhere" }}>{item.title}</div>
+
+        <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.005em", overflowWrap: "anywhere" }}>{item.title}</div>
+
         <div style={{ fontSize: 12, color: "var(--text-faint)" }}>
           {[
             item.customer,
-            item.ownerName && `owner: ${item.ownerName}`,
-            item.from && `last from ${item.from}`,
+            item.ownerName && `Owner: ${item.ownerName}`,
+            item.from && `Last from ${item.from}`,
             kindLabel[item.kind],
-            item.stage && `stage: ${item.stage}`,
+            item.stage && cap(item.stage),
             item.ownerName && item.ownerReason.startsWith("Owned by") ? undefined : item.ownerReason,
           ]
             .filter(Boolean)
-            .join(" · ")}
+            .join("  ·  ")}
         </div>
+
         {item.status && (
           <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
-            <span style={{ color: "var(--text-faint)" }}>Status:</span> {item.status}
+            <span style={{ color: "var(--text-faint)" }}>Status </span>
+            {item.status}
           </div>
         )}
         {item.summary && <div style={{ fontSize: 13, color: "var(--text-muted)" }}>{item.summary}</div>}
         {item.action && (
-          <div style={{ fontSize: 13, color: "var(--text)" }}>
-            <strong>→</strong> {item.action}
+          <div style={{ display: "flex", gap: 6, fontSize: 13, color: "var(--text)", fontWeight: 500 }}>
+            <ArrowRightIcon size={14} style={{ flex: "none", marginTop: 3, color: "var(--accent)" }} />
+            <span>{item.action}</span>
           </div>
         )}
         {item.timeline && <div style={{ fontSize: 12, color: "var(--text-faint)" }}>⏱ {item.timeline}</div>}
-        {item.suggestedReply && (
-          <div
-            style={{
-              fontSize: 13,
-              color: "var(--text-muted)",
-              background: "var(--bg)",
-              borderLeft: "3px solid var(--schedule-text)",
-              borderRadius: 4,
-              padding: "6px 10px",
-            }}
-          >
-            <span style={{ color: "var(--schedule-text)", fontWeight: 600 }}>Suggested reply:</span> {item.suggestedReply}
-          </div>
-        )}
+        {item.suggestedReply && <SuggestedReply text={item.suggestedReply} />}
       </div>
 
       {onTake && (
-        <div style={{ display: "flex", gap: 8, flex: "none" }}>
-          <button
-            onClick={onTake}
-            disabled={taken}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 12.5,
-              fontWeight: 600,
-              background: taken ? "var(--card)" : "var(--text)",
-              color: taken ? "var(--text-faint)" : "var(--bg)",
-              padding: "8px 14px",
-              borderRadius: 7,
-              border: taken ? "1px solid var(--border)" : "none",
-              cursor: taken ? "default" : "pointer",
-            }}
-          >
-            <CheckIcon size={13} color={taken ? "var(--text-faint)" : "var(--bg)"} />
-            {taken ? "In My Tasks" : status === "done" ? "Take again" : "Take"}
-          </button>
+        <div style={{ display: "flex", gap: 6, flex: "none", alignItems: "center" }}>
+          {taken ? (
+            <button className="btn btn-done" disabled title="Already a task in your Planner">
+              <CheckIcon size={13} />
+              In My Tasks
+            </button>
+          ) : (
+            <button className={status === "done" ? "btn" : "btn btn-primary"} onClick={onTake} title="Create this as a task in your Planner">
+              {status === "done" ? "Take again" : "Take"}
+              <ArrowRightIcon size={13} />
+            </button>
+          )}
           {!taken && onDismiss && (
-            <button
-              onClick={onDismiss}
-              title="Dismiss"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: 34,
-                border: "1px solid var(--border)",
-                borderRadius: 7,
-                background: "var(--card)",
-                color: "var(--text-faint)",
-              }}
-            >
+            <button className="btn btn-icon" onClick={onDismiss} title="Dismiss" aria-label="Dismiss">
               <XIcon size={13} />
             </button>
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function SuggestedReply({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // Clipboard blocked — the text is still on screen to select.
+    }
+  }
+  return (
+    <div className="reply">
+      <SparklesIcon size={15} style={{ flex: "none", marginTop: 2, color: "var(--accent)" }} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)", marginBottom: 2 }}>Suggested reply</div>
+        {text}
+      </div>
+      <button className="btn" onClick={copy} style={{ padding: "4px 10px", fontSize: 11.5 }} title="Copy reply">
+        <CopyIcon size={12} />
+        {copied ? "Copied" : "Copy"}
+      </button>
     </div>
   );
 }

@@ -1,24 +1,3 @@
-function Tile({ value, label, accent }: { value: string; label: string; accent?: boolean }) {
-  return (
-    <div
-      style={{
-        background: accent ? "var(--accent-tint)" : "var(--card)",
-        border: `1px solid ${accent ? "var(--accent-tint-border)" : "var(--border)"}`,
-        borderRadius: 10,
-        padding: "16px 18px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 2,
-      }}
-    >
-      <div style={{ fontSize: 24, fontWeight: 700, color: accent ? "var(--accent)" : "var(--text)" }}>{value}</div>
-      <div style={{ fontSize: 12, color: accent ? "var(--accent)" : "var(--text-faint)", letterSpacing: "0.03em" }}>
-        {label}
-      </div>
-    </div>
-  );
-}
-
 export interface TileSpec {
   value: string;
   label: string;
@@ -27,9 +6,21 @@ export interface TileSpec {
 
 export function StatTiles({ tiles }: { tiles: TileSpec[] }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 14 }}>
-      {tiles.map((t) => (
-        <Tile key={t.label} {...t} />
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
+      {tiles.map((t, i) => (
+        <div
+          key={t.label}
+          className={`card rise${t.accent ? " card-ai" : ""}`}
+          style={{ padding: "16px 18px", gap: 2, animationDelay: `${i * 50}ms` }}
+        >
+          <div
+            className={t.accent ? "gradient-text" : undefined}
+            style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1.1 }}
+          >
+            {t.value}
+          </div>
+          <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>{t.label}</div>
+        </div>
       ))}
     </div>
   );

@@ -22,7 +22,7 @@ function actionIcon(action: HistoryAction, quadrant?: HistoryEntry["quadrant"]) 
     return { bg: s.bg, color: s.text, icon: <CheckIcon size={13} color={s.text} /> };
   }
   if (action === "done") {
-    return { bg: "var(--text)", color: "var(--bg)", icon: <CheckIcon size={13} color="var(--bg)" /> };
+    return { bg: "var(--ai-gradient)", color: "#fff", icon: <CheckIcon size={13} color="#fff" /> };
   }
   return { bg: "var(--divider)", color: "var(--text-faint)", icon: <XIcon size={12} color="var(--text-faint)" /> };
 }
@@ -84,27 +84,13 @@ export function HistoryView({
       />
 
       <Card>
-        <SectionHeader
-          icon={<CalendarIcon />}
-          label="Past briefs"
-          right={<span style={{ fontSize: 12, color: "var(--text-faint)" }}>{briefs.length}</span>}
-        />
-        <div style={{ display: "flex", flexDirection: "column" }}>
+        <SectionHeader icon={<CalendarIcon size={15} />} label="Past briefs" hint="Every brief you've pasted — reopen any of them" count={briefs.length} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, margin: "0 -10px" }}>
           {briefs.map((b, i) => (
-            <div
-              key={b.id}
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                gap: 12,
-                padding: "12px 0",
-                borderBottom: i < briefs.length - 1 ? "1px solid var(--divider)" : "none",
-              }}
-            >
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, color: "var(--text-faint)", width: 92, flex: "none" }}>
+            <div key={b.id} className="item" style={{ alignItems: "center", gap: 12, padding: "10px 12px", animationDelay: `${i * 30}ms` }}>
+              <span className="chip" style={{ background: "var(--divider)", color: "var(--text-muted)", fontFamily: "var(--font-mono)", fontWeight: 500, flex: "none" }}>
                 {b.briefDate}
-              </div>
+              </span>
               <div style={{ flex: "1 1 220px", minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 600, overflowWrap: "anywhere" }}>{b.title}</div>
                 <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>
@@ -112,20 +98,12 @@ export function HistoryView({
                 </div>
               </div>
               {b.isCurrent ? (
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>Showing on Today</span>
+                <span className="chip" style={{ background: "var(--accent-tint)", color: "var(--accent)" }}>
+                  <span className="chip__dot" />
+                  Showing on Today
+                </span>
               ) : (
-                <button
-                  onClick={() => onViewBrief(b.id)}
-                  style={{
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                    padding: "6px 12px",
-                    borderRadius: 7,
-                    border: "1.5px solid var(--border)",
-                    background: "var(--card)",
-                    color: "var(--text-muted)",
-                  }}
-                >
+                <button className="btn" onClick={() => onViewBrief(b.id)}>
                   View
                 </button>
               )}
@@ -138,13 +116,13 @@ export function HistoryView({
       </Card>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-        <SectionHeader icon={<CheckIcon size={14} />} label="Activity" />
+        <SectionHeader icon={<CheckIcon size={14} />} label="Activity" hint="Everything you took, finished or dismissed" />
         {dates.map((date) => (
           <div key={date} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.03em", color: "var(--text-muted)" }}>
               {formatDateGroup(date)}
             </div>
-            <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 12, padding: "6px 24px" }}>
+            <div className="card rise" style={{ padding: "6px 20px", gap: 0 }}>
               {(grouped.get(date) ?? []).map((entry, i, arr) => {
                 const style = actionIcon(entry.action, entry.quadrant);
                 return (
@@ -160,9 +138,9 @@ export function HistoryView({
                   >
                     <div
                       style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: 6,
+                        width: 26,
+                        height: 26,
+                        borderRadius: "50%",
                         background: style.bg,
                         display: "flex",
                         alignItems: "center",

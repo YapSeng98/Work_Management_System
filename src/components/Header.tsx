@@ -1,5 +1,5 @@
 import type { Tab } from "../types";
-import { ClockIcon, MailIcon } from "./icons";
+import { LogOutIcon, SparklesIcon } from "./icons";
 
 export function Header({
   tab,
@@ -16,75 +16,49 @@ export function Header({
   email: string;
   onSignOut: () => void;
 }) {
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            background: "var(--text)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flex: "none",
-          }}
-        >
-          <MailIcon size={18} color="var(--bg)" />
-        </div>
-        <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.01em" }}>Daily Brief</div>
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "today", label: "Today" },
+    { id: "tasks", label: taskCount ? `My Tasks · ${taskCount}` : "My Tasks" },
+    { id: "history", label: "History" },
+  ];
 
-        <TabLink label="Today" active={tab === "today"} onClick={() => onTabChange("today")} />
-        <TabLink
-          label={taskCount ? `My Tasks (${taskCount})` : "My Tasks"}
-          active={tab === "tasks"}
-          onClick={() => onTabChange("tasks")}
-        />
-        <TabLink label="History" active={tab === "history"} onClick={() => onTabChange("history")} />
+  return (
+    <header className="card topbar">
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span className="icon-tile icon-tile--ai" style={{ width: 32, height: 32, borderRadius: 10 }}>
+          <SparklesIcon size={17} />
+        </span>
+        <div style={{ lineHeight: 1.15 }}>
+          <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-0.01em" }}>Daily Brief</div>
+          <div style={{ fontSize: 11, color: "var(--text-faint)" }}>AI work triage</div>
+        </div>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          fontFamily: "var(--font-mono)",
-          fontSize: 12,
-          color: "var(--text-faint)",
-        }}
-      >
-        <ClockIcon size={14} />
-        {status}
-        <span style={{ margin: "0 4px" }}>·</span>
-        <button
-          onClick={onSignOut}
-          title={email ? `Signed in as ${email}` : undefined}
-          style={{ background: "none", border: "none", padding: 0, fontFamily: "inherit", fontSize: 12, color: "var(--text-faint)", textDecoration: "underline" }}
+      <nav className="tabs" aria-label="Sections">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            className={`tab${tab === t.id ? " tab--active" : ""}`}
+            aria-current={tab === t.id ? "page" : undefined}
+            onClick={() => onTabChange(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span
+          className="chip"
+          style={{ background: "var(--divider)", color: "var(--text-muted)", fontFamily: "var(--font-mono)", fontWeight: 500 }}
         >
-          sign out
+          <span className="chip__dot" style={{ background: "var(--success)" }} />
+          {status}
+        </span>
+        <button className="btn btn-icon" onClick={onSignOut} title={email ? `Sign out (${email})` : "Sign out"} aria-label="Sign out">
+          <LogOutIcon size={15} />
         </button>
       </div>
-    </div>
-  );
-}
-
-function TabLink({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        background: "none",
-        border: "none",
-        marginLeft: 6,
-        paddingBottom: 1,
-        fontSize: 13,
-        fontWeight: active ? 600 : 400,
-        color: active ? "var(--accent)" : "var(--text-faint)",
-        borderBottom: active ? "1.5px solid var(--accent)" : "1px solid transparent",
-      }}
-    >
-      {label}
-    </button>
+    </header>
   );
 }
