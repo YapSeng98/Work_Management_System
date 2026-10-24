@@ -178,7 +178,7 @@ export function keywords(text: string): Set<string> {
   }
   return out;
 }
-/** All-caps words of 3+ letters (GST, BAM, NCC) — distinctive enough to match on their own. */
+/** All-caps words of 3+ letters (e.g. GST, ABC) — distinctive enough to match on their own. */
 function acronymsIn(text: string): Set<string> {
   return new Set((text.replace(REF_STRIP, " ").match(/\b[A-Z]{3,}\b/g) ?? []).map((w) => w.toLowerCase().slice(0, 6)).filter((w) => !STOPWORDS.has(w)));
 }
