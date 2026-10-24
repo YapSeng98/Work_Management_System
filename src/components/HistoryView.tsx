@@ -1,26 +1,22 @@
 import type { HistoryAction, HistoryEntry } from "../types";
 import { quadrantStyle } from "../quadrant";
-import { CheckIcon, ClockIcon, XIcon } from "./icons";
+import { isoDate } from "../lib/dates";
+import { CheckIcon, XIcon } from "./icons";
 
 function actionIcon(action: HistoryAction, quadrant?: HistoryEntry["quadrant"]) {
-  if ((action === "added" || action === "taken") && quadrant) {
+  if (action === "taken" && quadrant) {
     const s = quadrantStyle[quadrant];
     return { bg: s.bg, color: s.text, icon: <CheckIcon size={13} color={s.text} /> };
   }
   if (action === "done") {
     return { bg: "var(--text)", color: "var(--bg)", icon: <CheckIcon size={13} color="var(--bg)" /> };
   }
-  if (action === "snoozed") {
-    return { bg: "var(--later-bg)", color: "var(--later-text)", icon: <ClockIcon size={12} color="var(--later-text)" /> };
-  }
   return { bg: "var(--divider)", color: "var(--text-faint)", icon: <XIcon size={12} color="var(--text-faint)" /> };
 }
 
 function actionLabel(action: HistoryAction) {
-  if (action === "added") return "added to Planner";
   if (action === "taken") return "taken to My Tasks";
   if (action === "done") return "completed";
-  if (action === "snoozed") return "snoozed to tomorrow";
   return "dismissed";
 }
 
@@ -48,16 +44,17 @@ export function HistoryView({ entries }: { entries: HistoryEntry[] }) {
   }
   const dates = Array.from(grouped.keys()).sort((a, b) => (a < b ? 1 : -1));
 
-  const addedCount = entries.filter((e) => e.action === "added").length;
-  const snoozedCount = entries.filter((e) => e.action === "snoozed").length;
-  const dismissedCount = entries.filter((e) => e.action === "dismissed").length;
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 6);
+  const thisWeek = entries.filter((e) => e.date >= isoDate(weekAgo));
+  const count = (action: HistoryAction) => thisWeek.filter((e) => e.action === action).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14 }}>
-        <StatTile value={addedCount} label="added this week" />
-        <StatTile value={snoozedCount} label="snoozed this week" />
-        <StatTile value={dismissedCount} label="dismissed this week" />
+        <StatTile value={count("taken")} label="taken this week" />
+        <StatTile value={count("done")} label="done this week" />
+        <StatTile value={count("dismissed")} label="dismissed this week" />
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>

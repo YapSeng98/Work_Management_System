@@ -6,11 +6,15 @@ export function Header({
   onTabChange,
   status,
   taskCount,
+  email,
+  onSignOut,
 }: {
   tab: Tab;
   onTabChange: (t: Tab) => void;
   status: string;
   taskCount: number;
+  email: string;
+  onSignOut: () => void;
 }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
@@ -52,6 +56,14 @@ export function Header({
       >
         <ClockIcon size={14} />
         {status}
+        <span style={{ margin: "0 4px" }}>·</span>
+        <button
+          onClick={onSignOut}
+          title={email ? `Signed in as ${email}` : undefined}
+          style={{ background: "none", border: "none", padding: 0, fontFamily: "inherit", fontSize: 12, color: "var(--text-faint)", textDecoration: "underline" }}
+        >
+          sign out
+        </button>
       </div>
     </div>
   );

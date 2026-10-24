@@ -79,7 +79,7 @@ export function BriefImportCard({
           <textarea
             value={draft}
             onChange={(e) => handleChange(e.target.value)}
-            placeholder="Paste today's Daily Work Brief here — it's analysed automatically. Nothing leaves your browser."
+            placeholder="Paste today's Daily Work Brief here — it's analysed automatically and saved to your account."
             rows={6}
             style={{
               width: "100%",
