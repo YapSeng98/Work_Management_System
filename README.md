@@ -48,3 +48,15 @@ as it's pasted and saved to the `briefs` table:
 
 Each item gets a Do / Schedule / Delegate / Later quadrant. **Take** saves it to
 `tasks` (My Tasks), **✕** saves it to `dismissed_items`, and both are logged to `history`.
+
+### Built on your stored history
+
+- **Live** — the app subscribes to Supabase Realtime and refetches whenever any of
+  the four tables changes, so other tabs and devices stay in sync without a refresh.
+- **Pending since** — an item whose ticket number appeared in an earlier brief shows
+  the date it was first seen.
+- **Already taken** — an item counts as taken if an open task came from the same item
+  *or shares a ticket number*, so a reworded follow-up in tomorrow's brief isn't taken twice.
+  A completed task whose item comes back can be reopened with **Take again**.
+- **History tab** — stats for the last 7 days, every past brief (click **View** to
+  reopen it on Today) and the full activity log, all read from the database.

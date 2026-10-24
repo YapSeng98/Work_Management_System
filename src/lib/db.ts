@@ -17,7 +17,18 @@ function check<T>(res: { data: T; error: { message: string } | null }): T {
 
 export interface StoredBrief {
   id: string;
+  title: string;
+  briefDate: string; // local ISO date the brief is for (falls back to when it was pasted)
   rawText: string;
+  createdAt: string;
+}
+
+interface BriefRow {
+  id: string;
+  title: string;
+  brief_date: string | null;
+  raw_text: string;
+  created_at: string;
 }
 
 interface TaskRow {
@@ -42,6 +53,14 @@ interface HistoryRow {
   created_at: string;
 }
 
+const toBrief = (r: BriefRow): StoredBrief => ({
+  id: r.id,
+  title: r.title,
+  briefDate: r.brief_date ?? isoDate(new Date(r.created_at)),
+  rawText: r.raw_text,
+  createdAt: r.created_at,
+});
+
 const toTask = (r: TaskRow): MyTask => ({
   id: r.id,
   itemKey: r.item_key,
@@ -63,11 +82,12 @@ const toHistory = (r: HistoryRow): HistoryEntry => {
 
 // --- Briefs -----------------------------------------------------------------
 
-export async function fetchLatestBrief(): Promise<StoredBrief | null> {
-  const row = check(
-    await db().from("briefs").select("id, raw_text").order("created_at", { ascending: false }).limit(1).maybeSingle(),
-  ) as { id: string; raw_text: string } | null;
-  return row && { id: row.id, rawText: row.raw_text };
+/** Newest first. The latest one is what the Today tab shows. */
+export async function fetchBriefs(limit = 60): Promise<StoredBrief[]> {
+  const rows = check(
+    await db().from("briefs").select("*").order("created_at", { ascending: false }).limit(limit),
+  ) as BriefRow[];
+  return rows.map(toBrief);
 }
 
 export async function insertBrief(rawText: string, title: string, briefDate?: Date): Promise<StoredBrief> {
@@ -75,10 +95,10 @@ export async function insertBrief(rawText: string, title: string, briefDate?: Da
     await db()
       .from("briefs")
       .insert({ raw_text: rawText, title, brief_date: briefDate ? isoDate(briefDate) : null })
-      .select("id, raw_text")
+      .select("*")
       .single(),
-  ) as { id: string; raw_text: string };
-  return { id: row.id, rawText: row.raw_text };
+  ) as BriefRow;
+  return toBrief(row);
 }
 
 export async function deleteBrief(id: string) {
@@ -150,4 +170,25 @@ export async function insertHistory(action: HistoryAction, title: string, quadra
     await db().from("history").insert({ action, title, quadrant: quadrant ?? null }).select("*").single(),
   ) as HistoryRow;
   return toHistory(row);
+}
+
+// --- Live updates -----------------------------------------------------------
+
+export type Table = "briefs" | "tasks" | "dismissed_items" | "history";
+const TABLES: Table[] = ["briefs", "tasks", "dismissed_items", "history"];
+
+/**
+ * Calls onChange(table) whenever a row in one of our tables changes — from this
+ * tab, another tab or another device. Returns an unsubscribe function.
+ */
+export function subscribeToChanges(onChange: (table: Table) => void): () => void {
+  const client = db();
+  const channel = client.channel("daily-brief-changes");
+  for (const table of TABLES) {
+    channel.on("postgres_changes", { event: "*", schema: "public", table }, () => onChange(table));
+  }
+  channel.subscribe();
+  return () => {
+    void client.removeChannel(channel);
+  };
 }

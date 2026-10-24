@@ -1,6 +1,6 @@
 import type { BriefItem, ParsedBrief } from "../lib/briefParser";
 import { Card, SectionHeader } from "./Card";
-import { BriefItemRow } from "./BriefItemRow";
+import { BriefItemRow, type ItemStatus } from "./BriefItemRow";
 import { MeetingsCard } from "./MeetingsCard";
 import { StatTiles } from "./StatTiles";
 import { FlagIcon, ListChecksIcon, MailIcon, ReplyIcon } from "./icons";
@@ -8,21 +8,24 @@ import { FlagIcon, ListChecksIcon, MailIcon, ReplyIcon } from "./icons";
 export function BriefView({
   brief,
   hidden,
-  takenIds,
+  statusOf,
+  sinceOf,
   onTake,
   onDismiss,
 }: {
   brief: ParsedBrief;
   hidden: (id: string) => boolean;
-  takenIds: Set<string>;
+  statusOf: (item: BriefItem) => ItemStatus;
+  sinceOf: (item: BriefItem) => string | undefined;
   onTake: (item: BriefItem) => void;
   onDismiss: (item: BriefItem) => void;
 }) {
+  const shared = { statusOf, sinceOf };
   const visible = brief.items.filter((i) => !hidden(i.id));
   const mine = visible.filter((i) => i.owner === "me");
   const chase = visible.filter((i) => i.owner === "others");
   const fyi = visible.filter((i) => i.owner === "fyi");
-  const doToday = mine.filter((i) => i.quadrant === "do" && !takenIds.has(i.id)).length;
+  const doToday = mine.filter((i) => i.quadrant === "do" && statusOf(i) !== "taken").length;
 
   return (
     <>
@@ -47,7 +50,7 @@ export function BriefView({
         label="Pending you — most important first"
         items={mine}
         empty="Nothing pending you."
-        takenIds={takenIds}
+        {...shared}
         onTake={onTake}
         onDismiss={onDismiss}
       />
@@ -56,7 +59,7 @@ export function BriefView({
         label="Waiting on others — chase / follow up"
         items={chase}
         empty="Nobody to chase."
-        takenIds={takenIds}
+        {...shared}
         onTake={onTake}
         onDismiss={onDismiss}
       />
@@ -64,7 +67,7 @@ export function BriefView({
         <MeetingsCard meetings={brief.meetings.map((m) => ({ id: m.id, time: m.when, title: m.title }))} />
       )}
       {fyi.length > 0 && (
-        <ItemList icon={<FlagIcon />} label="FYI — no action" items={fyi} empty="" takenIds={takenIds} />
+        <ItemList icon={<FlagIcon />} label="FYI — no action" items={fyi} empty="" {...shared} />
       )}
     </>
   );
@@ -75,7 +78,8 @@ function ItemList({
   label,
   items,
   empty,
-  takenIds,
+  statusOf,
+  sinceOf,
   onTake,
   onDismiss,
 }: {
@@ -83,7 +87,8 @@ function ItemList({
   label: string;
   items: BriefItem[];
   empty: string;
-  takenIds: Set<string>;
+  statusOf: (item: BriefItem) => ItemStatus;
+  sinceOf: (item: BriefItem) => string | undefined;
   onTake?: (item: BriefItem) => void;
   onDismiss?: (item: BriefItem) => void;
 }) {
@@ -100,7 +105,8 @@ function ItemList({
             key={item.id}
             item={item}
             isLast={i === items.length - 1}
-            taken={takenIds.has(item.id)}
+            status={statusOf(item)}
+            since={sinceOf(item)}
             onTake={onTake && (() => onTake(item))}
             onDismiss={onDismiss && (() => onDismiss(item))}
           />

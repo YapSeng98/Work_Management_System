@@ -1,4 +1,4 @@
--- Daily Brief schema. Run once in the Supabase SQL Editor.
+-- Daily Brief schema. Run in the Supabase SQL Editor — safe to re-run after updates.
 -- Every table is protected by Row Level Security: a signed-in user can only
 -- read and write their own rows, so the public anon/publishable key is safe
 -- to ship in the browser bundle.
@@ -74,3 +74,18 @@ drop policy if exists "own history" on public.history;
 create policy "own history" on public.history
   for all to authenticated
   using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+
+-- Live updates: stream changes on these tables to signed-in clients (RLS still
+-- applies, so each user only receives their own rows). Safe to re-run.
+do $$
+declare t text;
+begin
+  foreach t in array array['briefs', 'tasks', 'dismissed_items', 'history'] loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;

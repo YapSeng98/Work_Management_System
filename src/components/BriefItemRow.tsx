@@ -9,22 +9,28 @@ const priorityStyle = {
   low: { bg: "var(--later-bg)", color: "var(--later-text)" },
 };
 
+/** new = not taken; taken = an open task covers it; done = taken before and completed. */
+export type ItemStatus = "new" | "taken" | "done";
+
 const kindLabel = { reply: "Needs reply", action: "Action required", decision: "Decision required", fyi: "FYI" };
 
 export function BriefItemRow({
   item,
   isLast,
-  taken,
+  status,
+  since,
   onTake,
   onDismiss,
 }: {
   item: BriefItem;
   isLast: boolean;
-  taken: boolean;
+  status: ItemStatus;
+  since?: string;
   onTake?: () => void;
   onDismiss?: () => void;
 }) {
   const q = quadrantStyle[item.quadrant];
+  const taken = status === "taken";
 
   return (
     <div
@@ -44,6 +50,8 @@ export function BriefItemRow({
           {item.kind !== "fyi" && <Pill label={item.priority.toUpperCase()} {...priorityStyle[item.priority]} />}
           {item.topRank && <Pill label={`TOP #${item.topRank}`} bg="var(--accent-tint)" color="var(--accent)" />}
           {item.due && <Pill label={`DUE ${item.due.toUpperCase()}`} bg="var(--badge-urgent-bg)" color="var(--badge-urgent-text)" />}
+          {since && <Pill label={`PENDING SINCE ${since.toUpperCase()}`} bg="var(--badge-warn-bg)" color="var(--badge-warn-text)" />}
+          {status === "done" && <Pill label="DONE BEFORE" bg="var(--later-bg)" color="var(--later-text)" />}
         </div>
         <div style={{ fontSize: 14.5, fontWeight: 600, overflowWrap: "anywhere" }}>{item.title}</div>
         <div style={{ fontSize: 12, color: "var(--text-faint)" }}>
@@ -78,7 +86,7 @@ export function BriefItemRow({
             }}
           >
             <CheckIcon size={13} color={taken ? "var(--text-faint)" : "var(--bg)"} />
-            {taken ? "In My Tasks" : "Take"}
+            {taken ? "In My Tasks" : status === "done" ? "Take again" : "Take"}
           </button>
           {!taken && onDismiss && (
             <button

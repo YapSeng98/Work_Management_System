@@ -1,7 +1,20 @@
 import type { HistoryAction, HistoryEntry } from "../types";
 import { quadrantStyle } from "../quadrant";
 import { isoDate } from "../lib/dates";
-import { CheckIcon, XIcon } from "./icons";
+import { Card, SectionHeader } from "./Card";
+import { StatTiles } from "./StatTiles";
+import { CalendarIcon, CheckIcon, XIcon } from "./icons";
+
+/** One row in "Past briefs", summarised from a stored brief. */
+export interface BriefSummary {
+  id: string;
+  title: string;
+  briefDate: string;
+  mine: number;
+  chase: number;
+  meetings: number;
+  isCurrent: boolean;
+}
 
 function actionIcon(action: HistoryAction, quadrant?: HistoryEntry["quadrant"]) {
   if (action === "taken" && quadrant) {
@@ -35,7 +48,17 @@ function formatDateGroup(iso: string): string {
   return label;
 }
 
-export function HistoryView({ entries }: { entries: HistoryEntry[] }) {
+export function HistoryView({
+  entries,
+  briefs,
+  openTasks,
+  onViewBrief,
+}: {
+  entries: HistoryEntry[];
+  briefs: BriefSummary[];
+  openTasks: number;
+  onViewBrief: (id: string) => void;
+}) {
   const grouped = new Map<string, HistoryEntry[]>();
   for (const entry of entries) {
     const list = grouped.get(entry.date) ?? [];
@@ -46,18 +69,76 @@ export function HistoryView({ entries }: { entries: HistoryEntry[] }) {
 
   const weekAgo = new Date();
   weekAgo.setDate(weekAgo.getDate() - 6);
-  const thisWeek = entries.filter((e) => e.date >= isoDate(weekAgo));
-  const count = (action: HistoryAction) => thisWeek.filter((e) => e.action === action).length;
+  const since = isoDate(weekAgo);
+  const count = (action: HistoryAction) => entries.filter((e) => e.date >= since && e.action === action).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 14 }}>
-        <StatTile value={count("taken")} label="taken this week" />
-        <StatTile value={count("done")} label="done this week" />
-        <StatTile value={count("dismissed")} label="dismissed this week" />
-      </div>
+      <StatTiles
+        tiles={[
+          { value: String(briefs.filter((b) => b.briefDate >= since).length), label: "briefs in last 7 days" },
+          { value: String(count("taken")), label: "taken in last 7 days" },
+          { value: String(count("done")), label: "done in last 7 days", accent: true },
+          { value: String(openTasks), label: "tasks still open" },
+        ]}
+      />
+
+      <Card>
+        <SectionHeader
+          icon={<CalendarIcon />}
+          label="Past briefs"
+          right={<span style={{ fontSize: 12, color: "var(--text-faint)" }}>{briefs.length}</span>}
+        />
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {briefs.map((b, i) => (
+            <div
+              key={b.id}
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 12,
+                padding: "12px 0",
+                borderBottom: i < briefs.length - 1 ? "1px solid var(--divider)" : "none",
+              }}
+            >
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: 12.5, color: "var(--text-faint)", width: 92, flex: "none" }}>
+                {b.briefDate}
+              </div>
+              <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, overflowWrap: "anywhere" }}>{b.title}</div>
+                <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 2 }}>
+                  {b.mine} pending you · {b.chase} to chase · {b.meetings} meetings
+                </div>
+              </div>
+              {b.isCurrent ? (
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>Showing on Today</span>
+              ) : (
+                <button
+                  onClick={() => onViewBrief(b.id)}
+                  style={{
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    padding: "6px 12px",
+                    borderRadius: 7,
+                    border: "1.5px solid var(--border)",
+                    background: "var(--card)",
+                    color: "var(--text-muted)",
+                  }}
+                >
+                  View
+                </button>
+              )}
+            </div>
+          ))}
+          {briefs.length === 0 && (
+            <div style={{ fontSize: 14, color: "var(--text-faint)" }}>No briefs yet — paste one on the Today tab.</div>
+          )}
+        </div>
+      </Card>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+        <SectionHeader icon={<CheckIcon size={14} />} label="Activity" />
         {dates.map((date) => (
           <div key={date} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.03em", color: "var(--text-muted)" }}>
@@ -91,7 +172,7 @@ export function HistoryView({ entries }: { entries: HistoryEntry[] }) {
                     >
                       {style.icon}
                     </div>
-                    <div style={{ flex: 1, fontSize: 14 }}>
+                    <div style={{ flex: 1, minWidth: 0, fontSize: 14, overflowWrap: "anywhere" }}>
                       {entry.title} <span style={{ color: "var(--text-faint)" }}>— {actionLabel(entry.action)}</span>
                     </div>
                     <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-faint)", flex: "none" }}>
@@ -104,18 +185,9 @@ export function HistoryView({ entries }: { entries: HistoryEntry[] }) {
           </div>
         ))}
         {dates.length === 0 && (
-          <div style={{ fontSize: 14, color: "var(--text-faint)" }}>Nothing logged yet — act on today's brief to start building history.</div>
+          <div style={{ fontSize: 14, color: "var(--text-faint)" }}>Nothing logged yet — take or dismiss items on Today to start building history.</div>
         )}
       </div>
-    </div>
-  );
-}
-
-function StatTile({ value, label }: { value: number; label: string }) {
-  return (
-    <div style={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 10, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 2 }}>
-      <div style={{ fontSize: 24, fontWeight: 700 }}>{value}</div>
-      <div style={{ fontSize: 12, color: "var(--text-faint)", letterSpacing: "0.03em" }}>{label}</div>
     </div>
   );
 }
