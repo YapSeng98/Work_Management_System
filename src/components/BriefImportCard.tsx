@@ -1,0 +1,102 @@
+import { useState } from "react";
+import type { ParsedBrief } from "../lib/briefParser";
+import { Card, SectionHeader } from "./Card";
+import { MailIcon } from "./icons";
+
+const buttonStyle: React.CSSProperties = {
+  fontSize: 12.5,
+  fontWeight: 600,
+  padding: "7px 12px",
+  borderRadius: 7,
+  border: "1.5px solid var(--border)",
+  background: "var(--card)",
+  color: "var(--text-muted)",
+};
+
+/**
+ * Paste box for the daily brief. Analysis happens as soon as text is pasted
+ * or typed — there's no "Analyse" button. Once a brief is loaded the box
+ * collapses to a one-line summary.
+ */
+export function BriefImportCard({
+  brief,
+  onText,
+  onClear,
+}: {
+  brief: ParsedBrief | null;
+  onText: (text: string) => boolean;
+  onClear: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  function handleChange(text: string) {
+    setDraft(text);
+    if (!text.trim()) {
+      setError(null);
+      return;
+    }
+    if (onText(text)) {
+      setDraft("");
+      setError(null);
+      setEditing(false);
+    } else {
+      setError("Couldn't find any items in this text — paste the full Daily Work Brief, including the section headings.");
+    }
+  }
+
+  const open = !brief || editing;
+  const mine = brief?.items.filter((i) => i.owner === "me").length ?? 0;
+  const chase = brief?.items.filter((i) => i.owner === "others").length ?? 0;
+
+  return (
+    <Card>
+      <SectionHeader
+        icon={<MailIcon size={14} />}
+        label="Paste brief"
+        right={
+          brief && (
+            <div style={{ display: "flex", gap: 8 }}>
+              <button style={buttonStyle} onClick={() => setEditing((e) => !e)}>
+                {editing ? "Cancel" : "Paste new brief"}
+              </button>
+              <button style={buttonStyle} onClick={onClear}>
+                Clear
+              </button>
+            </div>
+          )
+        }
+      />
+      {brief && !editing && (
+        <div style={{ fontSize: 14, color: "var(--text-muted)" }}>
+          <strong style={{ color: "var(--text)" }}>{brief.title}</strong> — {mine} pending you, {chase} to chase,{" "}
+          {brief.meetings.length} meetings.
+        </div>
+      )}
+      {open && (
+        <>
+          <textarea
+            value={draft}
+            onChange={(e) => handleChange(e.target.value)}
+            placeholder="Paste today's Daily Work Brief here — it's analysed automatically. Nothing leaves your browser."
+            rows={6}
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              resize: "vertical",
+              border: "1.5px solid var(--border)",
+              borderRadius: 8,
+              padding: "10px 12px",
+              fontSize: 13.5,
+              fontFamily: "inherit",
+              background: "var(--bg)",
+              color: "var(--text)",
+            }}
+          />
+          {error && <div style={{ fontSize: 13, color: "var(--do-text)" }}>{error}</div>}
+        </>
+      )}
+    </Card>
+  );
+}

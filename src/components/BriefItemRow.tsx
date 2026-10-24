@@ -1,0 +1,105 @@
+import { quadrantLabel, quadrantStyle } from "../quadrant";
+import type { BriefItem } from "../lib/briefParser";
+import { CheckIcon, XIcon } from "./icons";
+import { Pill } from "./Pill";
+
+const priorityStyle = {
+  high: { bg: "var(--badge-urgent-bg)", color: "var(--badge-urgent-text)" },
+  medium: { bg: "var(--badge-warn-bg)", color: "var(--badge-warn-text)" },
+  low: { bg: "var(--later-bg)", color: "var(--later-text)" },
+};
+
+const kindLabel = { reply: "Needs reply", action: "Action required", decision: "Decision required", fyi: "FYI" };
+
+export function BriefItemRow({
+  item,
+  isLast,
+  taken,
+  onTake,
+  onDismiss,
+}: {
+  item: BriefItem;
+  isLast: boolean;
+  taken: boolean;
+  onTake?: () => void;
+  onDismiss?: () => void;
+}) {
+  const q = quadrantStyle[item.quadrant];
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 14,
+        alignItems: "flex-start",
+        padding: "14px 0",
+        borderBottom: isLast ? "none" : "1px solid var(--divider)",
+        opacity: taken ? 0.6 : 1,
+      }}
+    >
+      <div style={{ flex: "1 1 280px", minWidth: 0, display: "flex", flexDirection: "column", gap: 5 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <Pill label={quadrantLabel[item.quadrant].toUpperCase()} bg={q.bg} color={q.text} />
+          {item.kind !== "fyi" && <Pill label={item.priority.toUpperCase()} {...priorityStyle[item.priority]} />}
+          {item.topRank && <Pill label={`TOP #${item.topRank}`} bg="var(--accent-tint)" color="var(--accent)" />}
+          {item.due && <Pill label={`DUE ${item.due.toUpperCase()}`} bg="var(--badge-urgent-bg)" color="var(--badge-urgent-text)" />}
+        </div>
+        <div style={{ fontSize: 14.5, fontWeight: 600, overflowWrap: "anywhere" }}>{item.title}</div>
+        <div style={{ fontSize: 12, color: "var(--text-faint)" }}>
+          {[item.from && `from ${item.from}`, kindLabel[item.kind], item.ownerReason].filter(Boolean).join(" · ")}
+        </div>
+        {item.summary && <div style={{ fontSize: 13, color: "var(--text-muted)" }}>{item.summary}</div>}
+        {item.action && (
+          <div style={{ fontSize: 13, color: "var(--text)" }}>
+            <strong>→</strong> {item.action}
+          </div>
+        )}
+        {item.timeline && <div style={{ fontSize: 12, color: "var(--text-faint)" }}>⏱ {item.timeline}</div>}
+      </div>
+
+      {onTake && (
+        <div style={{ display: "flex", gap: 8, flex: "none" }}>
+          <button
+            onClick={onTake}
+            disabled={taken}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 12.5,
+              fontWeight: 600,
+              background: taken ? "var(--card)" : "var(--text)",
+              color: taken ? "var(--text-faint)" : "var(--bg)",
+              padding: "8px 14px",
+              borderRadius: 7,
+              border: taken ? "1px solid var(--border)" : "none",
+              cursor: taken ? "default" : "pointer",
+            }}
+          >
+            <CheckIcon size={13} color={taken ? "var(--text-faint)" : "var(--bg)"} />
+            {taken ? "In My Tasks" : "Take"}
+          </button>
+          {!taken && onDismiss && (
+            <button
+              onClick={onDismiss}
+              title="Dismiss"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 34,
+                border: "1px solid var(--border)",
+                borderRadius: 7,
+                background: "var(--card)",
+                color: "var(--text-faint)",
+              }}
+            >
+              <XIcon size={13} />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

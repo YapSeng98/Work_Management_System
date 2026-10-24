@@ -3,9 +3,12 @@ import { quadrantStyle } from "../quadrant";
 import { CheckIcon, ClockIcon, XIcon } from "./icons";
 
 function actionIcon(action: HistoryAction, quadrant?: HistoryEntry["quadrant"]) {
-  if (action === "added" && quadrant) {
+  if ((action === "added" || action === "taken") && quadrant) {
     const s = quadrantStyle[quadrant];
     return { bg: s.bg, color: s.text, icon: <CheckIcon size={13} color={s.text} /> };
+  }
+  if (action === "done") {
+    return { bg: "var(--text)", color: "var(--bg)", icon: <CheckIcon size={13} color="var(--bg)" /> };
   }
   if (action === "snoozed") {
     return { bg: "var(--later-bg)", color: "var(--later-text)", icon: <ClockIcon size={12} color="var(--later-text)" /> };
@@ -15,6 +18,8 @@ function actionIcon(action: HistoryAction, quadrant?: HistoryEntry["quadrant"]) 
 
 function actionLabel(action: HistoryAction) {
   if (action === "added") return "added to Planner";
+  if (action === "taken") return "taken to My Tasks";
+  if (action === "done") return "completed";
   if (action === "snoozed") return "snoozed to tomorrow";
   return "dismissed";
 }

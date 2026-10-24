@@ -1,4 +1,4 @@
-import type { HistoryEntry } from "../types";
+import type { HistoryEntry, MyTask } from "../types";
 
 /**
  * Browser persistence for triage state, so a reload doesn't resurrect tasks
@@ -8,6 +8,8 @@ import type { HistoryEntry } from "../types";
 
 const HISTORY_KEY = "daily-brief:history";
 const TRIAGE_KEY = "daily-brief:triage";
+const BRIEF_KEY = "daily-brief:brief-text";
+const TASKS_KEY = "daily-brief:my-tasks";
 
 /** Candidate id → ISO date it stays hidden until ("9999-12-31" = permanently). */
 export type TriageState = Record<string, string>;
@@ -36,6 +38,12 @@ export const saveHistory = (entries: HistoryEntry[]) => write(HISTORY_KEY, entri
 
 export const loadTriage = () => read<TriageState>(TRIAGE_KEY, {});
 export const saveTriage = (state: TriageState) => write(TRIAGE_KEY, state);
+
+export const loadBriefText = () => read(BRIEF_KEY, "");
+export const saveBriefText = (text: string) => write(BRIEF_KEY, text);
+
+export const loadMyTasks = () => read<MyTask[]>(TASKS_KEY, []);
+export const saveMyTasks = (tasks: MyTask[]) => write(TASKS_KEY, tasks);
 
 /** True if the candidate should currently be hidden from the triage list. */
 export function isHidden(state: TriageState, id: string, today: string) {

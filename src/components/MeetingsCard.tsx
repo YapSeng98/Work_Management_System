@@ -17,7 +17,7 @@ export function MeetingsCard({ meetings }: { meetings: Meeting[] }) {
               borderBottom: i < meetings.length - 1 ? "1px solid var(--divider)" : "none",
             }}
           >
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--text-faint)", width: 64, flex: "none" }}>
+            <div style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--text-faint)", minWidth: 64, flex: "none", whiteSpace: "nowrap" }}>
               {m.time}
             </div>
             <div style={{ fontSize: 14 }}>{m.title}</div>

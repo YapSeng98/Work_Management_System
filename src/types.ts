@@ -31,7 +31,9 @@ export interface CandidateTask {
   sourceSubject: string;
 }
 
-export type HistoryAction = "added" | "snoozed" | "dismissed";
+export type Tab = "today" | "tasks" | "history";
+
+export type HistoryAction = "added" | "taken" | "done" | "snoozed" | "dismissed";
 
 export interface HistoryEntry {
   id: string;
@@ -50,4 +52,18 @@ export interface Digest {
   flagged: FlaggedEmail[];
   awaitingReply: AwaitingReply[];
   candidateTasks: CandidateTask[];
+}
+
+/** A brief item the user has taken on ("Take" on the Today tab). */
+export interface MyTask {
+  id: string;
+  title: string;
+  quadrant: Quadrant;
+  due: string;
+  from?: string;
+  action?: string;
+  refs: string[];
+  takenAt: string; // ISO date
+  done: boolean;
+  score?: number; // importance from the brief analysis; higher sorts first
 }

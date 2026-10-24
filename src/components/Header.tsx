@@ -1,10 +1,19 @@
+import type { Tab } from "../types";
 import { ClockIcon, MailIcon } from "./icons";
 
-type Tab = "today" | "history";
-
-export function Header({ tab, onTabChange, syncedAt }: { tab: Tab; onTabChange: (t: Tab) => void; syncedAt: string }) {
+export function Header({
+  tab,
+  onTabChange,
+  status,
+  taskCount,
+}: {
+  tab: Tab;
+  onTabChange: (t: Tab) => void;
+  status: string;
+  taskCount: number;
+}) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div
           style={{
@@ -23,6 +32,11 @@ export function Header({ tab, onTabChange, syncedAt }: { tab: Tab; onTabChange: 
         <div style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.01em" }}>Daily Brief</div>
 
         <TabLink label="Today" active={tab === "today"} onClick={() => onTabChange("today")} />
+        <TabLink
+          label={taskCount ? `My Tasks (${taskCount})` : "My Tasks"}
+          active={tab === "tasks"}
+          onClick={() => onTabChange("tasks")}
+        />
         <TabLink label="History" active={tab === "history"} onClick={() => onTabChange("history")} />
       </div>
 
@@ -37,7 +51,7 @@ export function Header({ tab, onTabChange, syncedAt }: { tab: Tab; onTabChange: 
         }}
       >
         <ClockIcon size={14} />
-        synced {syncedAt}
+        {status}
       </div>
     </div>
   );

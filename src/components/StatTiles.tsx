@@ -19,23 +19,18 @@ function Tile({ value, label, accent }: { value: string; label: string; accent?:
   );
 }
 
-export function StatTiles({
-  meetings,
-  unread,
-  flagged,
-  freeHours,
-}: {
-  meetings: number;
-  unread: number;
-  flagged: number;
-  freeHours: number;
-}) {
+export interface TileSpec {
+  value: string;
+  label: string;
+  accent?: boolean;
+}
+
+export function StatTiles({ tiles }: { tiles: TileSpec[] }) {
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 14 }}>
-      <Tile value={String(meetings)} label="meetings today" />
-      <Tile value={String(unread)} label="unread emails" />
-      <Tile value={String(flagged)} label="flagged for you" />
-      <Tile value={`${freeHours}h`} label="free between meetings" accent />
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 14 }}>
+      {tiles.map((t) => (
+        <Tile key={t.label} {...t} />
+      ))}
     </div>
   );
 }

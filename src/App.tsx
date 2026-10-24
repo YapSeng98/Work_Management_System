@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./styles/global.css";
 
 import { Header } from "./components/Header";
@@ -11,14 +11,35 @@ import { ListChecksIcon } from "./components/icons";
 import { CandidateTaskRow } from "./components/CandidateTaskRow";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { HistoryView } from "./components/HistoryView";
+import { BriefImportCard } from "./components/BriefImportCard";
+import { BriefView } from "./components/BriefView";
+import { MyTasksView } from "./components/MyTasksView";
 
 import { seedHistory } from "./data/mock";
 import { fetchDigest } from "./api/digestClient";
 import { candidateToCreateInput, createTaskInPlanner } from "./api/plannerClient";
-import { HIDE_FOREVER, isHidden, loadHistory, loadTriage, saveHistory, saveTriage, type TriageState } from "./lib/storage";
-import type { CandidateTask, Digest, HistoryEntry, Quadrant } from "./types";
+import { parseBrief, type BriefItem, type ParsedBrief } from "./lib/briefParser";
+import {
+  HIDE_FOREVER,
+  isHidden,
+  loadBriefText,
+  loadHistory,
+  loadMyTasks,
+  loadTriage,
+  saveBriefText,
+  saveHistory,
+  saveMyTasks,
+  saveTriage,
+  type TriageState,
+} from "./lib/storage";
+import type { CandidateTask, Digest, HistoryEntry, MyTask, Quadrant, Tab } from "./types";
 
-type Tab = "today" | "history";
+/** Parse pasted brief text; null if it contains nothing recognisable. */
+function analyse(text: string): ParsedBrief | null {
+  if (!text.trim()) return null;
+  const parsed = parseBrief(text);
+  return parsed.items.length || parsed.meetings.length ? parsed : null;
+}
 
 function nowTime() {
   return new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
@@ -47,9 +68,16 @@ export default function App() {
   const [triage, setTriage] = useState<TriageState>(loadTriage);
   const [history, setHistory] = useState<HistoryEntry[]>(() => loadHistory(seedHistory));
   const [confirming, setConfirming] = useState<CandidateTask | null>(null);
+  const [briefText, setBriefText] = useState<string>(loadBriefText);
+  const [myTasks, setMyTasks] = useState<MyTask[]>(loadMyTasks);
 
   useEffect(() => saveTriage(triage), [triage]);
   useEffect(() => saveHistory(history), [history]);
+  useEffect(() => saveBriefText(briefText), [briefText]);
+  useEffect(() => saveMyTasks(myTasks), [myTasks]);
+
+  const brief = useMemo(() => analyse(briefText), [briefText]);
+  const takenIds = useMemo(() => new Set(myTasks.map((t) => t.id)), [myTasks]);
 
   function load() {
     fetchDigest()
@@ -88,6 +116,44 @@ export default function App() {
     logHistory({ title: task.title, action: "dismissed" });
   }
 
+  function handleBriefText(text: string) {
+    if (!analyse(text)) return false;
+    setBriefText(text);
+    return true;
+  }
+
+  function handleTake(item: BriefItem) {
+    if (takenIds.has(item.id)) return;
+    const task: MyTask = {
+      id: item.id,
+      title: item.title,
+      quadrant: item.quadrant,
+      due: item.due,
+      from: item.from,
+      action: item.action,
+      refs: item.refs,
+      takenAt: todayIso(),
+      done: false,
+      score: item.score,
+    };
+    setMyTasks((prev) => [task, ...prev]);
+    logHistory({ title: item.title, action: "taken", quadrant: item.quadrant });
+  }
+
+  function handleDismissBriefItem(item: BriefItem) {
+    hideCandidate(item.id, HIDE_FOREVER);
+    logHistory({ title: item.title, action: "dismissed" });
+  }
+
+  function handleToggleDone(task: MyTask) {
+    setMyTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, done: !t.done } : t)));
+    if (!task.done) logHistory({ title: task.title, action: "done", quadrant: task.quadrant });
+  }
+
+  function handleRemoveTask(task: MyTask) {
+    setMyTasks((prev) => prev.filter((t) => t.id !== task.id));
+  }
+
   async function handleConfirm(edited: { title: string; quadrant: Quadrant; due: string; project: string }) {
     if (!confirming) return;
     const input = candidateToCreateInput(confirming, edited);
@@ -110,10 +176,38 @@ export default function App() {
       }}
     >
       <div style={{ width: "100%", maxWidth: 960, display: "flex", flexDirection: "column", gap: 28 }}>
-        <Header tab={tab} onTabChange={setTab} syncedAt={digest?.syncedAt ?? "—"} />
+        <Header
+          tab={tab}
+          onTabChange={setTab}
+          taskCount={myTasks.filter((t) => !t.done).length}
+          status={
+            brief
+              ? `brief ${brief.date?.toLocaleDateString(undefined, { day: "numeric", month: "short" }) ?? "loaded"}`
+              : "sample data"
+          }
+        />
+
+        {tab === "today" && (
+          <BriefImportCard brief={brief} onText={handleBriefText} onClear={() => setBriefText("")} />
+        )}
 
         {tab === "history" ? (
           <HistoryView entries={history} />
+        ) : tab === "tasks" ? (
+          <MyTasksView
+            tasks={myTasks}
+            onToggleDone={handleToggleDone}
+            onRemove={handleRemoveTask}
+            onClearDone={() => setMyTasks((prev) => prev.filter((t) => !t.done))}
+          />
+        ) : brief ? (
+          <BriefView
+            brief={brief}
+            hidden={(id) => isHidden(triage, id, today)}
+            takenIds={takenIds}
+            onTake={handleTake}
+            onDismiss={handleDismissBriefItem}
+          />
         ) : loadError ? (
           <Card>
             <div style={{ fontSize: 14, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 12 }}>
@@ -127,11 +221,16 @@ export default function App() {
           <div style={{ fontSize: 14, color: "var(--text-faint)" }}>Loading today's brief…</div>
         ) : (
           <>
+            <div style={{ fontSize: 12, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--text-faint)" }}>
+              Sample data — paste your brief above to see your own
+            </div>
             <StatTiles
-              meetings={digest.meetings.length}
-              unread={digest.unreadCount}
-              flagged={digest.flagged.length}
-              freeHours={digest.freeHoursToday}
+              tiles={[
+                { value: String(digest.meetings.length), label: "meetings today" },
+                { value: String(digest.unreadCount), label: "unread emails" },
+                { value: String(digest.flagged.length), label: "flagged for you" },
+                { value: `${digest.freeHoursToday}h`, label: "free between meetings", accent: true },
+              ]}
             />
             <MeetingsCard meetings={digest.meetings} />
             <FlaggedCard items={digest.flagged} />
