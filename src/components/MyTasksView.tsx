@@ -2,6 +2,19 @@ import { quadrantLabel, quadrantOrder, quadrantStyle } from "../quadrant";
 import type { MyTask, Quadrant } from "../types";
 import { Card, SectionHeader } from "./Card";
 import { CheckIcon, ListChecksIcon, XIcon } from "./icons";
+import { PLANNER_URL } from "../lib/planner";
+
+function PlannerNote() {
+  return (
+    <div style={{ fontSize: 13, color: "var(--text-faint)" }}>
+      These are real tasks in your{" "}
+      <a href={PLANNER_URL} target="_blank" rel="noreferrer">
+        Planner
+      </a>{" "}
+      — ticking one here ticks it there, and changes made in the Planner show up here live.
+    </div>
+  );
+}
 
 const quadrantHint: Record<Quadrant, string> = {
   do: "urgent & important — do today",
@@ -30,6 +43,7 @@ export function MyTasksView({
         <SectionHeader icon={<ListChecksIcon />} label="My Tasks" />
         <div style={{ fontSize: 14, color: "var(--text-faint)" }}>
           No tasks yet — paste your brief on the Today tab and click <strong>Take</strong> on the items you'll handle.
+          They're added to your Planner.
         </div>
       </Card>
     );
@@ -37,6 +51,7 @@ export function MyTasksView({
 
   return (
     <>
+      <PlannerNote />
       {quadrantOrder.map((q) => {
         const list = open.filter((t) => t.quadrant === q).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
         if (list.length === 0) return null;
@@ -75,7 +90,7 @@ export function MyTasksView({
                   color: "var(--text-muted)",
                 }}
               >
-                Clear done
+                Hide done
               </button>
             }
           />
@@ -146,7 +161,7 @@ function TaskList({
           </div>
           <button
             onClick={() => onRemove(t)}
-            title="Remove"
+            title="Delete from Planner"
             style={{ background: "none", border: "none", color: "var(--text-faint)", padding: 4, flex: "none" }}
           >
             <XIcon size={13} />

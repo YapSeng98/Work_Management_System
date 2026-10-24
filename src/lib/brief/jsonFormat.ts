@@ -87,6 +87,7 @@ export function parseJsonBrief(data: Record<string, unknown>): ParsedBrief {
         ownerReason: reason,
         topRank,
         due,
+        dueDate: dueDay,
         waitingSince: since ? new Date(since + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" }) : undefined,
         risk,
         escalation: escalation || undefined,

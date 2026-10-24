@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { shadowEmail } from "../lib/planner";
 import { Card } from "./Card";
 import { MailIcon } from "./icons";
 
@@ -14,11 +15,11 @@ const inputStyle: React.CSSProperties = {
 };
 
 /**
- * Email + password sign-in. Accounts are created in the Supabase dashboard
- * (public sign-up is meant to be switched off), so there's no sign-up form.
+ * Sign in with the Planner account (same Supabase project): username + password,
+ * mapped to the Planner's shadow email. There's no sign-up here — use the Planner.
  */
 export function LoginView() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +29,8 @@ export function LoginView() {
     if (!supabase) return;
     setBusy(true);
     setError(null);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    if (error) setError(error.message);
+    const { error } = await supabase.auth.signInWithPassword({ email: shadowEmail(username), password });
+    if (error) setError(error.message === "Invalid login credentials" ? "Wrong username or password." : error.message);
     setBusy(false);
   }
 
@@ -38,7 +39,16 @@ export function LoginView() {
       <Card>
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div style={{ fontSize: 16, fontWeight: 700 }}>Sign in</div>
-          <input type="email" autoComplete="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required style={inputStyle} />
+          <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: -6 }}>Use your Planner username and password.</div>
+          <input
+            autoComplete="username"
+            autoCapitalize="none"
+            placeholder="Planner username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+            style={inputStyle}
+          />
           <input
             type="password"
             autoComplete="current-password"

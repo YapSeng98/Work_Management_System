@@ -166,10 +166,10 @@ export function Workspace({ email, onSignOut }: { email: string; onSignOut: () =
     void run(async () => {
       if (doneBefore) {
         // Same item came back after being completed — reopen the existing task.
-        await db.setTaskDone(doneBefore.id, false);
-        setTasks((prev) => prev.map((t) => (t.id === doneBefore.id ? { ...t, done: false } : t)));
+        const rev = await db.setTaskDone(doneBefore, false);
+        setTasks((prev) => prev.map((t) => (t.id === doneBefore.id ? { ...t, done: false, rev } : t)));
       } else {
-        const task = await db.insertTask(item, current?.id ?? null);
+        const task = await db.insertTask(item, current ? { id: current.id, title: current.title } : null);
         setTasks((prev) => [task, ...prev]);
       }
       await log("taken", item.title, item.quadrant);
@@ -186,22 +186,23 @@ export function Workspace({ email, onSignOut }: { email: string; onSignOut: () =
 
   function handleToggleDone(task: MyTask) {
     void run(async () => {
-      await db.setTaskDone(task.id, !task.done);
-      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, done: !t.done } : t)));
+      const rev = await db.setTaskDone(task, !task.done);
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, done: !t.done, rev } : t)));
       if (!task.done) await log("done", task.title, task.quadrant);
     });
   }
 
   function handleRemoveTask(task: MyTask) {
+    if (!window.confirm(`Delete "${task.title}" from your Planner too?`)) return;
     void run(async () => {
-      await db.deleteTask(task.id);
+      await db.deleteTask(task);
       setTasks((prev) => prev.filter((t) => t.id !== task.id));
     });
   }
 
   function handleClearDone() {
     void run(async () => {
-      await db.deleteDoneTasks();
+      await db.unlinkTasks(tasks.filter((t) => t.done).map((t) => t.id));
       setTasks((prev) => prev.filter((t) => !t.done));
     });
   }

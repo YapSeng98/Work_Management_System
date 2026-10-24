@@ -22,6 +22,7 @@ export interface BriefItem {
   ownerReason: string;
   topRank?: number;
   due: string; // "Today", "Tomorrow", "This week", "Overdue", a short date, or ""
+  dueDate?: string; // exact ISO date when the source gives one (JSON block)
   waitingSince?: string;
   risk?: Priority;
   escalation?: boolean;

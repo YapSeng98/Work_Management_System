@@ -19,9 +19,9 @@ export interface HistoryEntry {
   quadrant?: Quadrant;
 }
 
-/** A brief item the user has taken on ("Take" on the Today tab). */
+/** A brief item the user has taken on ("Take" on the Today tab) — a real Planner task. */
 export interface MyTask {
-  id: string;
+  id: string; // the Planner task's id
   itemKey: string; // BriefItem.id it came from
   title: string;
   quadrant: Quadrant;
@@ -32,4 +32,5 @@ export interface MyTask {
   takenAt: string; // local ISO date
   done: boolean;
   score: number; // importance from the brief analysis; higher sorts first
+  rev: number | null; // Planner row revision, sent as base_rev on updates
 }

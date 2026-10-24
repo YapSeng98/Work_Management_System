@@ -7,13 +7,14 @@ behind a login.
 
 ## Setup
 
-1. **Supabase project** — create one (region: Singapore), then run
-   [`supabase/schema.sql`](supabase/schema.sql) in the SQL Editor. It creates the
-   tables and Row Level Security so each user only sees their own rows.
-2. **Your account** — Authentication → Users → *Add user* (email + password,
-   auto-confirm). Then turn off *Allow new users to sign up*.
-3. **Keys** — copy `.env.example` to `.env` and fill in the Project URL and the
-   anon / publishable key (never the service_role / secret key).
+Daily Brief shares the **Planner app's Supabase project** (`rleqtargnhpsojfpegtf`):
+you sign in with your Planner username and password, and **Take** creates a real
+task in the Planner.
+
+1. Run [`supabase/schema.sql`](supabase/schema.sql) once in that project's SQL Editor.
+   It only adds `brief_*` tables (with Row Level Security); Planner tables are untouched.
+2. `.env` holds the project URL and publishable key (public by design — the same key
+   ships in the Planner's own bundle).
 
 ```sh
 npm install
@@ -24,6 +25,18 @@ npm run lint
 
 Pushing to `main` deploys to GitHub Pages via `.github/workflows/deploy.yml`.
 
+### How it talks to the Planner
+
+- Tasks are written **only through the Planner's `sync_push()` RPC** — the path its own
+  devices use — so field edit times and revisions stay consistent. New tasks send only
+  the fields they fill (title, notes, state, priority, due); ticking done sends `state`;
+  delete is the Planner's soft delete (`deleted`). See `src/lib/planner.ts`.
+- `brief_task_links` remembers which brief item each task came from; My Tasks reads the
+  linked rows from `public.tasks`, so titles, due dates and done state edited in the
+  Planner show up here.
+- Live updates: Realtime on the `brief_*` tables plus the Planner's `sync_signals`
+  (bumped on every task change from any device).
+
 ## How it's put together
 
 | Path | What it does |
@@ -31,9 +44,10 @@ Pushing to `main` deploys to GitHub Pages via `.github/workflows/deploy.yml`.
 | `src/App.tsx` | Auth gate: setup notice → sign-in → workspace |
 | `src/Workspace.tsx` | Today / My Tasks / History tabs and all handlers |
 | `src/lib/brief/` | Analyses a pasted brief: `jsonFormat` (structured block), `execFormat` (Executive Work Brief), `dailyFormat` (older Daily Work Brief) |
-| `src/lib/db.ts` | All Supabase reads/writes (briefs, tasks, dismissed items, history) |
+| `src/lib/db.ts` | All Supabase reads/writes (brief_* tables, Planner tasks via sync_push) |
+| `src/lib/planner.ts` | Planner bridge: username login, priority / due / notes mapping, push items |
 | `src/lib/supabase.ts` | Supabase client from `VITE_SUPABASE_*` env vars |
-| `supabase/schema.sql` | Tables + RLS policies |
+| `supabase/schema.sql` | `brief_*` tables + RLS, for the Planner's Supabase project |
 | `src/components/` | Paste card, brief view, My Tasks, history, login |
 
 ### How a brief is analysed
@@ -57,8 +71,9 @@ Items are grouped as:
 - **Waiting on others** — items in "Waiting for Customer" or whose action is to chase / track sign-off.
 - **Meetings** and **FYI** (no action; also anything listed under "Closed").
 
-Each item gets a Do / Schedule / Delegate / Later quadrant. **Take** saves it to
-`tasks` (My Tasks), **✕** saves it to `dismissed_items`, and both are logged to `history`.
+Each item gets a Do / Schedule / Delegate / Later quadrant. **Take** creates a Planner
+task (priority from urgency, due date from the brief, details in its notes) and links it;
+**✕** saves to `brief_dismissed`; both are logged to `brief_history`.
 
 ### Built on your stored history
 
