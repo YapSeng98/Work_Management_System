@@ -28,7 +28,13 @@ export default function App() {
       key={session.user.id}
       userId={session.user.id}
       email={session.user.email ?? ""}
-      onSignOut={() => supabase?.auth.signOut()}
+      onSignOut={() => {
+        // Same browser + same Supabase project as the Planner, so the session is shared.
+        // Sign out only here (never "global", which would end every device's session).
+        if (window.confirm("Sign out? Your Planner in this browser is signed out too (same account). You'll need your Planner username and password to sign back in.")) {
+          void supabase?.auth.signOut({ scope: "local" });
+        }
+      }}
     />
   );
 }
