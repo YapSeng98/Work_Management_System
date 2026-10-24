@@ -9,7 +9,7 @@ import { MyTasksView } from "./components/MyTasksView";
 import type { ItemStatus } from "./components/BriefItemRow";
 import { XIcon } from "./components/icons";
 
-import { parseBrief, type BriefItem, type ParsedBrief } from "./lib/briefParser";
+import { parseBrief, type BriefItem, type ParsedBrief } from "./lib/brief";
 import * as db from "./lib/db";
 import type { HistoryAction, HistoryEntry, MyTask, Quadrant, Tab } from "./types";
 

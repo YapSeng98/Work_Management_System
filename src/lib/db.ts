@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 import { isoDate, localTime } from "./dates";
-import type { BriefItem } from "./briefParser";
+import type { BriefItem } from "./brief";
 import type { HistoryAction, HistoryEntry, MyTask, Quadrant } from "../types";
 
 /** All reads and writes go through here. RLS scopes every query to the signed-in user. */

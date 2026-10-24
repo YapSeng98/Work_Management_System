@@ -1,4 +1,4 @@
-import type { BriefItem, ParsedBrief } from "../lib/briefParser";
+import type { BriefItem, ParsedBrief } from "../lib/brief";
 import { Card, SectionHeader } from "./Card";
 import { BriefItemRow, type ItemStatus } from "./BriefItemRow";
 import { MeetingsCard } from "./MeetingsCard";
@@ -38,10 +38,22 @@ export function BriefView({
         ]}
       />
 
-      {brief.executiveSummary && (
+      {(brief.executiveSummary || brief.counts.length > 0) && (
         <Card>
           <SectionHeader icon={<MailIcon size={14} />} label="Summary" />
-          <div style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.5 }}>{brief.executiveSummary}</div>
+          {brief.executiveSummary && <div style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.5 }}>{brief.executiveSummary}</div>}
+          {brief.counts.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {brief.counts.map((c) => (
+                <span
+                  key={c.label}
+                  style={{ fontSize: 12, color: "var(--text-muted)", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: 6, padding: "4px 9px" }}
+                >
+                  {c.label} <strong style={{ color: "var(--text)" }}>{c.value}</strong>
+                </span>
+              ))}
+            </div>
+          )}
         </Card>
       )}
 

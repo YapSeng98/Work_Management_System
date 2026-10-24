@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ParsedBrief } from "../lib/briefParser";
+import { AI_INSTRUCTIONS, type ParsedBrief } from "../lib/brief";
 import { Card, SectionHeader } from "./Card";
 import { MailIcon } from "./icons";
 
@@ -30,6 +30,17 @@ export function BriefImportCard({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function copyInstructions() {
+    try {
+      await navigator.clipboard.writeText(AI_INSTRUCTIONS);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("Copy these instructions and add them to the end of your AI prompt:", AI_INSTRUCTIONS);
+    }
+  }
 
   function handleChange(text: string) {
     setDraft(text);
@@ -56,22 +67,35 @@ export function BriefImportCard({
         icon={<MailIcon size={14} />}
         label="Paste brief"
         right={
-          brief && (
-            <div style={{ display: "flex", gap: 8 }}>
-              <button style={buttonStyle} onClick={() => setEditing((e) => !e)}>
-                {editing ? "Cancel" : "Paste new brief"}
-              </button>
-              <button style={buttonStyle} onClick={onClear}>
-                Clear
-              </button>
-            </div>
-          )
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "flex-end" }}>
+            <button
+              style={buttonStyle}
+              onClick={copyInstructions}
+              title="Add these to the end of your AI prompt so the report includes data this app reads exactly"
+            >
+              {copied ? "Copied ✓" : "Copy AI instructions"}
+            </button>
+            {brief && (
+              <>
+                <button style={buttonStyle} onClick={() => setEditing((e) => !e)}>
+                  {editing ? "Cancel" : "Paste new brief"}
+                </button>
+                <button style={buttonStyle} onClick={onClear}>
+                  Clear
+                </button>
+              </>
+            )}
+          </div>
         }
       />
       {brief && !editing && (
         <div style={{ fontSize: 14, color: "var(--text-muted)" }}>
           <strong style={{ color: "var(--text)" }}>{brief.title}</strong> — {mine} pending you, {chase} to chase,{" "}
           {brief.meetings.length} meetings.
+          <span style={{ color: "var(--text-faint)" }}>
+            {" "}
+            {brief.format === "json" ? "Read from the structured data block." : "Read from the report text."}
+          </span>
         </div>
       )}
       {open && (

@@ -1,9 +1,10 @@
 import { quadrantLabel, quadrantStyle } from "../quadrant";
-import type { BriefItem } from "../lib/briefParser";
+import type { BriefItem } from "../lib/brief";
 import { CheckIcon, XIcon } from "./icons";
 import { Pill } from "./Pill";
 
 const priorityStyle = {
+  critical: { bg: "var(--do-text)", color: "#fff" },
   high: { bg: "var(--badge-urgent-bg)", color: "var(--badge-urgent-text)" },
   medium: { bg: "var(--badge-warn-bg)", color: "var(--badge-warn-text)" },
   low: { bg: "var(--later-bg)", color: "var(--later-text)" },
@@ -12,7 +13,13 @@ const priorityStyle = {
 /** new = not taken; taken = an open task covers it; done = taken before and completed. */
 export type ItemStatus = "new" | "taken" | "done";
 
-const kindLabel = { reply: "Needs reply", action: "Action required", decision: "Decision required", fyi: "FYI" };
+const kindLabel = {
+  reply: "Needs reply",
+  action: "Action required",
+  decision: "Decision required",
+  follow_up: "Follow up",
+  fyi: "FYI",
+};
 
 export function BriefItemRow({
   item,
@@ -49,14 +56,27 @@ export function BriefItemRow({
           <Pill label={quadrantLabel[item.quadrant].toUpperCase()} bg={q.bg} color={q.text} />
           {item.kind !== "fyi" && <Pill label={item.priority.toUpperCase()} {...priorityStyle[item.priority]} />}
           {item.topRank && <Pill label={`TOP #${item.topRank}`} bg="var(--accent-tint)" color="var(--accent)" />}
+          {item.escalation && <Pill label="ESCALATION" bg="var(--do-text)" color="#fff" />}
+          {(item.risk === "critical" || item.risk === "high") && (
+            <Pill label={`RISK ${item.risk.toUpperCase()}`} {...priorityStyle[item.risk === "critical" ? "high" : "medium"]} />
+          )}
+          {item.personal && <Pill label="FOR YOU" bg="var(--schedule-bg)" color="var(--schedule-text)" />}
+          {item.waitingSince && <Pill label={`WAITING SINCE ${item.waitingSince.toUpperCase()}`} bg="var(--badge-warn-bg)" color="var(--badge-warn-text)" />}
           {item.due && <Pill label={`DUE ${item.due.toUpperCase()}`} bg="var(--badge-urgent-bg)" color="var(--badge-urgent-text)" />}
           {since && <Pill label={`PENDING SINCE ${since.toUpperCase()}`} bg="var(--badge-warn-bg)" color="var(--badge-warn-text)" />}
           {status === "done" && <Pill label="DONE BEFORE" bg="var(--later-bg)" color="var(--later-text)" />}
         </div>
         <div style={{ fontSize: 14.5, fontWeight: 600, overflowWrap: "anywhere" }}>{item.title}</div>
         <div style={{ fontSize: 12, color: "var(--text-faint)" }}>
-          {[item.from && `from ${item.from}`, kindLabel[item.kind], item.ownerReason].filter(Boolean).join(" · ")}
+          {[item.customer, item.from && `from ${item.from}`, kindLabel[item.kind], item.stage && `stage: ${item.stage}`, item.ownerReason]
+            .filter(Boolean)
+            .join(" · ")}
         </div>
+        {item.status && (
+          <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
+            <span style={{ color: "var(--text-faint)" }}>Status:</span> {item.status}
+          </div>
+        )}
         {item.summary && <div style={{ fontSize: 13, color: "var(--text-muted)" }}>{item.summary}</div>}
         {item.action && (
           <div style={{ fontSize: 13, color: "var(--text)" }}>

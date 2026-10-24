@@ -1,55 +1,20 @@
-import type { Quadrant } from "../types";
+import type { Quadrant } from "../../types";
+import { hashId, refsIn, sortItems } from "./common";
+import type { BriefItem, BriefMeeting, ItemKind, Owner, ParsedBrief, Priority } from "./types";
 
 /**
- * Turns a pasted "Daily Work Brief" (plain text from an AI mailbox summary)
- * into ranked items. Runs entirely in the browser — nothing is uploaded.
- *
- * Expected shape (tolerant of small variations):
+ * Reader for the original "Daily Work Brief" layout:
  *   🔴 Needs Reply / 🟠 Action Required / 🟡 Decision Required — items start with "[High] …"
  *   🔵 Meeting & Schedule — "Today 2:00 PM" followed by a title line
  *   ⚪ FYI — title line followed by a summary line
  *   Today's Top 5 Priorities, Support Summary ("Waiting for Customer", "Waiting for <your team>", …)
  */
 
-export type Priority = "high" | "medium" | "low";
-export type ItemKind = "reply" | "action" | "decision" | "fyi";
-/** me = the next move is yours; others = you're waiting on / chasing someone; fyi = no action. */
-export type Owner = "me" | "others" | "fyi";
-
-export interface BriefItem {
-  id: string;
-  kind: ItemKind;
-  priority: Priority;
-  title: string;
-  from?: string;
-  summary?: string;
-  action?: string;
-  timeline?: string;
-  refs: string[];
-  owner: Owner;
-  ownerReason: string;
-  topRank?: number;
-  due: "Today" | "This week" | "";
-  score: number;
-  quadrant: Quadrant;
-}
-
-export interface BriefMeeting {
-  id: string;
-  when: string;
-  title: string;
-}
-
-export interface ParsedBrief {
-  title: string;
-  date?: Date;
-  items: BriefItem[];
-  meetings: BriefMeeting[];
-  executiveSummary?: string;
-}
-
 type Section =
-  | ItemKind
+  | "reply"
+  | "action"
+  | "decision"
+  | "fyi"
   | "meetings"
   | "top"
   | "waitCustomer"
@@ -57,8 +22,6 @@ type Section =
   | "investigating"
   | "closed"
   | "ignore";
-
-const REF_RE = /\b(?:INC|SR|IN|CR|CHG|RITM|REQ|PRB)\d{5,}\b|\b[A-Z][A-Z0-9]{2,}-\d{6,}\b/g;
 
 const CHASE_RE =
   /\b(chase|follow up on|track (?:uat|approval)|awaiting (?:user|customer|business|final|stakeholder)|waiting for (?:user|customer|business|verification|sign-?off)|once .{0,40}(?:received|confirmed|verified))/i;
@@ -86,16 +49,6 @@ function sectionOf(line: string): Section | null {
   return null;
 }
 
-function refsIn(text: string): string[] {
-  return [...new Set(text.match(REF_RE) ?? [])];
-}
-
-function hashId(text: string): string {
-  let h = 0;
-  for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;
-  return `b-${(h >>> 0).toString(36)}`;
-}
-
 function parseDate(title: string): Date | undefined {
   const m = title.match(/(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{4})/);
   if (!m) return undefined;
@@ -110,7 +63,7 @@ interface RawItem {
   lines: string[];
 }
 
-export function parseBrief(text: string): ParsedBrief {
+export function parseDailyBrief(text: string): ParsedBrief {
   const lines = text.split(/\r?\n/).map((l) => l.trim());
   const title = lines.find((l) => l.length > 0) ?? "Daily Brief";
   const date = parseDate(title);
@@ -153,7 +106,7 @@ export function parseBrief(text: string): ParsedBrief {
       case "reply":
       case "action":
       case "decision": {
-        const tagged = line.match(/^\[(high|medium|low)\]\s*(.+)$/i);
+        const tagged = line.match(/^\[(critical|high|medium|low)\]\s*(.+)$/i);
         if (tagged) {
           current = { kind: section, priority: tagged[1].toLowerCase() as Priority, header: tagged[2], lines: [] };
           raws.push(current);
@@ -199,10 +152,7 @@ export function parseBrief(text: string): ParsedBrief {
   const weekEndsToday = date !== undefined && date.getDay() >= 5; // brief written on Fri/Sat
   const items = raws.map((raw) => toItem(raw, { topRank, lists, weekEndsToday }));
 
-  const ownerOrder: Record<Owner, number> = { me: 0, others: 1, fyi: 2 };
-  items.sort((a, b) => ownerOrder[a.owner] - ownerOrder[b.owner] || b.score - a.score);
-
-  return { title, date, items, meetings, executiveSummary };
+  return { format: "daily", title, date, items: sortItems(items), meetings, counts: [], executiveSummary };
 }
 
 function toItem(
@@ -262,14 +212,14 @@ function toItem(
   }
 
   const timeText = `${timeline ?? ""} ${summary ?? ""}`;
-  const due: BriefItem["due"] = TODAY_RE.test(timeText) || (ctx.weekEndsToday && WEEK_RE.test(timeText))
+  const due = TODAY_RE.test(timeText) || (ctx.weekEndsToday && WEEK_RE.test(timeText))
     ? "Today"
     : WEEK_RE.test(timeText)
       ? "This week"
       : "";
 
   const score =
-    { high: 30, medium: 20, low: 10 }[raw.priority] +
+    { critical: 40, high: 30, medium: 20, low: 10 }[raw.priority] +
     (topRank ? (6 - Math.min(topRank, 5)) * 5 : 0) +
     (due === "Today" ? 15 : due === "This week" ? 8 : 0) +
     (raw.kind === "reply" ? 5 : raw.kind === "decision" ? 3 : 0);
@@ -278,7 +228,7 @@ function toItem(
   if (owner === "fyi") quadrant = "later";
   else if (owner === "others") quadrant = "delegate";
   else if (due === "Today" || (topRank !== undefined && topRank <= 3)) quadrant = "do";
-  else if (raw.priority === "high" || due === "This week" || topRank !== undefined) quadrant = "schedule";
+  else if (raw.priority === "high" || raw.priority === "critical" || due === "This week" || topRank !== undefined) quadrant = "schedule";
   else quadrant = "later";
 
   return {

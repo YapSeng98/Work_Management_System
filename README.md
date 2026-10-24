@@ -30,7 +30,7 @@ Pushing to `main` deploys to GitHub Pages via `.github/workflows/deploy.yml`.
 | --- | --- |
 | `src/App.tsx` | Auth gate: setup notice → sign-in → workspace |
 | `src/Workspace.tsx` | Today / My Tasks / History tabs and all handlers |
-| `src/lib/briefParser.ts` | Analyses a pasted Daily Work Brief into ranked items |
+| `src/lib/brief/` | Analyses a pasted brief: `jsonFormat` (structured block), `execFormat` (Executive Work Brief), `dailyFormat` (older Daily Work Brief) |
 | `src/lib/db.ts` | All Supabase reads/writes (briefs, tasks, dismissed items, history) |
 | `src/lib/supabase.ts` | Supabase client from `VITE_SUPABASE_*` env vars |
 | `supabase/schema.sql` | Tables + RLS policies |
@@ -39,7 +39,18 @@ Pushing to `main` deploys to GitHub Pages via `.github/workflows/deploy.yml`.
 ### How a brief is analysed
 
 Paste a brief into the **Paste brief** box on the Today tab — it's analysed as soon
-as it's pasted and saved to the `briefs` table:
+as it's pasted and saved to the `briefs` table. Three layouts are understood, tried in order:
+
+1. **Structured JSON block** — most reliable. **Copy AI instructions** (on the paste
+   box) copies a section to append to your AI prompt; the AI then ends its report with
+   a JSON block listing every item once, with owner, urgency, risk, due date and Top-10 rank.
+2. **Executive Work Brief** — the `=====`-divided report (Requires my response,
+   Escalations, Open support incidents, UAT tracker, Customer follow-up, Risks, Top 10,
+   Personal attention). Tables pasted as tab-separated text are reconstructed, and every
+   mention of the same ticket (or the same thread, by subject keywords) is merged into one item.
+3. **Daily Work Brief** — the earlier emoji-section layout.
+
+Items are grouped as:
 
 - **Pending you** — items where the next move is yours, ranked by priority tag,
   the brief's Top 5, and deadline wording ("EOD", "ASAP", "end of week").
