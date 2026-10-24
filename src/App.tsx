@@ -23,5 +23,12 @@ export default function App() {
   if (!supabase) return <SetupNotice />;
   if (session === undefined) return null; // restoring a saved session
   if (!session) return <LoginView />;
-  return <Workspace key={session.user.id} email={session.user.email ?? ""} onSignOut={() => supabase?.auth.signOut()} />;
+  return (
+    <Workspace
+      key={session.user.id}
+      userId={session.user.id}
+      email={session.user.email ?? ""}
+      onSignOut={() => supabase?.auth.signOut()}
+    />
+  );
 }

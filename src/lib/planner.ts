@@ -1,5 +1,7 @@
 import type { BriefItem, Priority } from "./brief";
 import { isoDate } from "./dates";
+import { quadrantLabel, quadrantOrder } from "../quadrant";
+import type { Quadrant } from "../types";
 
 /**
  * Bridge to the Planner app (Personal-Planning), which shares this Supabase project.
@@ -36,6 +38,23 @@ export function plannerDue(item: BriefItem, today = new Date()): string | undefi
   return item.quadrant === "do" ? isoDate(d) : undefined;
 }
 
+/**
+ * Same id on every device for this account + brief item, the way the Planner derives
+ * ids itself (its db.ts uuidFrom). Taking an item twice targets the same task, and
+ * "already taken?" needs no link table.
+ */
+export async function taskIdFor(userId: string, itemKey: string): Promise<string> {
+  const data = new TextEncoder().encode(`daily-brief:${userId}:${itemKey}`);
+  const h = new Uint8Array(await crypto.subtle.digest("SHA-256", data)).slice(0, 16);
+  h[6] = (h[6] & 0x0f) | 0x50; // version 5-style (name-based)
+  h[8] = (h[8] & 0x3f) | 0x80; // RFC 4122 variant
+  const x = [...h].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
+}
+
+/** Last line of every task's notes — how My Tasks finds tasks that came from a brief. */
+export const NOTES_MARKER = "— Daily Brief ·";
+
 /** Task notes: everything useful from the brief, so the Planner task stands on its own. */
 export function plannerNotes(item: BriefItem, briefTitle?: string): string {
   return [
@@ -44,10 +63,24 @@ export function plannerNotes(item: BriefItem, briefTitle?: string): string {
     item.summary,
     item.refs.length ? `Tickets: ${item.refs.join(", ")}` : undefined,
     [item.from && `From: ${item.from}`, item.customer && `Customer: ${item.customer}`].filter(Boolean).join(" · ") || undefined,
-    `— from Daily Brief${briefTitle ? ` (${briefTitle})` : ""}`,
+    `${NOTES_MARKER} ${quadrantLabel[item.quadrant]}${briefTitle ? ` · ${briefTitle}` : ""}`,
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+/** Reads back what plannerNotes wrote (tolerant of edits made in the Planner). */
+export function parseNotes(notes: string | null) {
+  const lines = (notes ?? "").split("\n");
+  const field = (name: string) => lines.find((l) => l.startsWith(`${name}: `))?.slice(name.length + 2);
+  const footer = lines.find((l) => l.startsWith(NOTES_MARKER)) ?? "";
+  const quadrant = quadrantOrder.find((q) => footer.includes(`· ${quadrantLabel[q]}`)) as Quadrant | undefined;
+  return {
+    action: field("Next"),
+    refs: (field("Tickets") ?? "").split(",").map((r) => r.trim()).filter(Boolean),
+    from: field("From")?.split(" · ")[0],
+    quadrant,
+  };
 }
 
 export interface PushItem {

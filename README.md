@@ -13,6 +13,8 @@ task in the Planner.
 
 1. Run [`supabase/schema.sql`](supabase/schema.sql) once in that project's SQL Editor.
    It only adds `brief_*` tables (with Row Level Security); Planner tables are untouched.
+   Planner sync works without it — until it's run, pasted briefs and history are kept
+   in the browser instead.
 2. `.env` holds the project URL and publishable key (public by design — the same key
    ships in the Planner's own bundle).
 
@@ -31,9 +33,12 @@ Pushing to `main` deploys to GitHub Pages via `.github/workflows/deploy.yml`.
   devices use — so field edit times and revisions stay consistent. New tasks send only
   the fields they fill (title, notes, state, priority, due); ticking done sends `state`;
   delete is the Planner's soft delete (`deleted`). See `src/lib/planner.ts`.
-- `brief_task_links` remembers which brief item each task came from; My Tasks reads the
-  linked rows from `public.tasks`, so titles, due dates and done state edited in the
-  Planner show up here.
+- No link table: a task's id is derived from the account + brief item (the Planner's own
+  `uuidFrom` pattern), so taking an item again targets the same task, and its notes end
+  with a `— Daily Brief · <Quadrant> · <brief>` line. **Keep that line's start stable** —
+  the Planner uses it to badge these tasks. My Tasks lists Planner tasks carrying it, so
+  titles, due dates and done state edited in the Planner show up here, and tasks ticked
+  done anywhere close automatically ("Closed today").
 - Live updates: Realtime on the `brief_*` tables plus the Planner's `sync_signals`
   (bumped on every task change from any device).
 

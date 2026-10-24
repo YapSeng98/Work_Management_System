@@ -11,6 +11,7 @@ import { XIcon } from "./components/icons";
 
 import { parseBrief, type BriefItem, type ParsedBrief } from "./lib/brief";
 import * as db from "./lib/db";
+import { taskIdFor } from "./lib/planner";
 import type { HistoryAction, HistoryEntry, MyTask, Quadrant, Tab } from "./types";
 
 /** Parse pasted brief text; null if it contains nothing recognisable. */
@@ -33,7 +34,7 @@ function message(err: unknown) {
  * and a live subscription refetches whenever data changes anywhere (other tab,
  * other device), so every view always reflects what's stored.
  */
-export function Workspace({ email, onSignOut }: { email: string; onSignOut: () => void }) {
+export function Workspace({ userId, email, onSignOut }: { userId: string; email: string; onSignOut: () => void }) {
   const [tab, setTab] = useState<Tab>("today");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,18 +43,14 @@ export function Workspace({ email, onSignOut }: { email: string; onSignOut: () =
   const [tasks, setTasks] = useState<MyTask[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [storeMode, setStoreMode] = useState<db.StoreMode>("supabase");
+  const [taskIds, setTaskIds] = useState<Map<string, string>>(new Map()); // brief item id → Planner task id
   const inFlight = useRef(new Set<string>()); // item keys being saved, to ignore double clicks
 
   useEffect(() => {
-    Promise.all([db.fetchBriefs(), db.fetchTasks(), db.fetchDismissed(), db.fetchHistory()])
-      .then(([b, t, d, h]) => {
-        setBriefs(b);
-        setTasks(t);
-        setDismissed(d);
-        setHistory(h);
-      })
-      .catch((err: unknown) => setError(`Couldn't load your data: ${message(err)}`))
-      .finally(() => setLoading(false));
+    let unsubscribe = () => {};
+    let cancelled = false;
+    const timers = new Map<db.Table, ReturnType<typeof setTimeout>>();
 
     // Live updates: refetch a table shortly after it changes (batches bursts of events).
     const loaders: Record<db.Table, () => Promise<void>> = {
@@ -62,21 +59,41 @@ export function Workspace({ email, onSignOut }: { email: string; onSignOut: () =
       dismissed_items: () => db.fetchDismissed().then(setDismissed),
       history: () => db.fetchHistory().then(setHistory),
     };
-    const timers = new Map<db.Table, ReturnType<typeof setTimeout>>();
-    const unsubscribe = db.subscribeToChanges((table) => {
-      clearTimeout(timers.get(table));
-      timers.set(
-        table,
-        setTimeout(() => loaders[table]().catch((err: unknown) => setError(`Live update failed: ${message(err)}`)), 200),
-      );
-    });
+    const subscribe = () =>
+      db.subscribeToChanges((table) => {
+        clearTimeout(timers.get(table));
+        timers.set(
+          table,
+          setTimeout(() => loaders[table]().catch((err: unknown) => setError(`Live update failed: ${message(err)}`)), 200),
+        );
+      });
+    (async () => {
+      setStoreMode(await db.detectStore());
+      const [b, t, d, h] = await Promise.all([db.fetchBriefs(), db.fetchTasks(), db.fetchDismissed(), db.fetchHistory()]);
+      if (cancelled) return;
+      setBriefs(b);
+      setTasks(t);
+      setDismissed(d);
+      setHistory(h);
+      unsubscribe = subscribe();
+    })()
+      .catch((err: unknown) => setError(`Couldn't load your data: ${message(err)}`))
+      .finally(() => setLoading(false));
+
     return () => {
+      cancelled = true;
       unsubscribe();
       timers.forEach(clearTimeout);
     };
   }, []);
 
   const parsed = useMemo(() => new Map(briefs.map((b) => [b.id, analyse(b.rawText)])), [briefs]);
+
+  // The Planner task id each brief item would get (derived, so no link table is needed).
+  useEffect(() => {
+    const keys = [...new Set([...parsed.values()].flatMap((p) => p?.items.map((i) => i.id) ?? []))];
+    void Promise.all(keys.map(async (k) => [k, await taskIdFor(userId, k)] as const)).then((pairs) => setTaskIds(new Map(pairs)));
+  }, [parsed, userId]);
   const current = briefs.find((b) => b.id === viewingId) ?? briefs[0] ?? null;
   const brief = current ? (parsed.get(current.id) ?? null) : null;
 
@@ -96,12 +113,13 @@ export function Workspace({ email, onSignOut }: { email: string; onSignOut: () =
 
   /** An open task covers an item if it came from the same item or shares a ticket number. */
   function openTaskFor(item: BriefItem) {
-    return tasks.find((t) => !t.done && (t.itemKey === item.id || t.refs.some((r) => item.refs.includes(r))));
+    const id = taskIds.get(item.id);
+    return tasks.find((t) => !t.done && (t.id === id || t.refs.some((r) => item.refs.includes(r))));
   }
 
   function statusOf(item: BriefItem): ItemStatus {
     if (openTaskFor(item)) return "taken";
-    return tasks.some((t) => t.itemKey === item.id && t.done) ? "done" : "new";
+    return tasks.some((t) => t.id === taskIds.get(item.id) && t.done) ? "done" : "new";
   }
 
   function sinceOf(item: BriefItem) {
@@ -162,15 +180,15 @@ export function Workspace({ email, onSignOut }: { email: string; onSignOut: () =
   function handleTake(item: BriefItem) {
     if (openTaskFor(item) || inFlight.current.has(item.id)) return;
     inFlight.current.add(item.id);
-    const doneBefore = tasks.find((t) => t.itemKey === item.id && t.done);
+    const doneBefore = tasks.find((t) => t.id === taskIds.get(item.id) && t.done);
     void run(async () => {
       if (doneBefore) {
         // Same item came back after being completed — reopen the existing task.
         const rev = await db.setTaskDone(doneBefore, false);
         setTasks((prev) => prev.map((t) => (t.id === doneBefore.id ? { ...t, done: false, rev } : t)));
       } else {
-        const task = await db.insertTask(item, current ? { id: current.id, title: current.title } : null);
-        setTasks((prev) => [task, ...prev]);
+        const task = await db.insertTask(item, userId, current?.title);
+        setTasks((prev) => [task, ...prev.filter((t) => t.id !== task.id)]);
       }
       await log("taken", item.title, item.quadrant);
     }).finally(() => inFlight.current.delete(item.id));
@@ -197,13 +215,6 @@ export function Workspace({ email, onSignOut }: { email: string; onSignOut: () =
     void run(async () => {
       await db.deleteTask(task);
       setTasks((prev) => prev.filter((t) => t.id !== task.id));
-    });
-  }
-
-  function handleClearDone() {
-    void run(async () => {
-      await db.unlinkTasks(tasks.filter((t) => t.done).map((t) => t.id));
-      setTasks((prev) => prev.filter((t) => !t.done));
     });
   }
 
@@ -257,7 +268,7 @@ export function Workspace({ email, onSignOut }: { email: string; onSignOut: () =
             }}
           />
         ) : tab === "tasks" ? (
-          <MyTasksView tasks={tasks} onToggleDone={handleToggleDone} onRemove={handleRemoveTask} onClearDone={handleClearDone} />
+          <MyTasksView tasks={tasks} onToggleDone={handleToggleDone} onRemove={handleRemoveTask} />
         ) : (
           <>
             {current && current.id !== briefs[0]?.id && (
@@ -274,6 +285,12 @@ export function Workspace({ email, onSignOut }: { email: string; onSignOut: () =
                   </button>
                 </div>
               </Card>
+            )}
+            {storeMode === "local" && (
+              <div style={{ fontSize: 12.5, color: "var(--text-faint)" }}>
+                Planner sync is on. Pasted briefs and history are kept in this browser until{" "}
+                <code>supabase/schema.sql</code> is run in the Planner's Supabase project.
+              </div>
             )}
             <BriefImportCard brief={brief} onText={handleBriefText} onClear={handleClearBrief} />
             {brief && (

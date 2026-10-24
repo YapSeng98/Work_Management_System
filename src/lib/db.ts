@@ -1,13 +1,17 @@
 import { supabase } from "./supabase";
 import { isoDate, localTime } from "./dates";
-import { plannerDue, plannerNotes, plannerPriority, taskPush, type PushItem } from "./planner";
+import { readLocal, writeLocal } from "./storage";
+import { NOTES_MARKER, parseNotes, plannerDue, plannerNotes, plannerPriority, taskIdFor, taskPush, type PushItem } from "./planner";
 import type { BriefItem } from "./brief";
 import type { HistoryAction, HistoryEntry, MyTask, Quadrant } from "../types";
 
 /**
- * All reads and writes go through here. Brief data lives in the brief_* tables;
- * taken tasks are real Planner tasks (public.tasks), written via sync_push only.
- * RLS scopes every query to the signed-in user.
+ * All reads and writes go through here.
+ *
+ * - Tasks are real Planner tasks (public.tasks), written only via the Planner's
+ *   sync_push RPC. Nothing extra is needed in the database for them.
+ * - Briefs, dismissed items and history live in the brief_* tables when they exist
+ *   (supabase/schema.sql); until then they're kept in this browser.
  */
 
 function db() {
@@ -18,6 +22,18 @@ function db() {
 function check<T>(res: { data: T; error: { message: string } | null }): T {
   if (res.error) throw new Error(res.error.message);
   return res.data;
+}
+
+export type StoreMode = "supabase" | "local";
+let mode: StoreMode = "supabase";
+
+/** Use the brief_* tables if they exist, otherwise this browser. Call once after sign-in. */
+export async function detectStore(): Promise<StoreMode> {
+  const { error } = await db().from("brief_reports").select("id").limit(1);
+  if (!error) mode = "supabase";
+  else if (/could not find the table|does not exist|PGRST205/i.test(`${error.message} ${(error as { code?: string }).code ?? ""}`)) mode = "local";
+  else throw new Error(error.message);
+  return mode;
 }
 
 export interface StoredBrief {
@@ -36,24 +52,15 @@ interface BriefRow {
   created_at: string;
 }
 
-interface LinkRow {
-  item_key: string;
-  task_id: string;
-  quadrant: Quadrant;
-  from_name: string | null;
-  action: string | null;
-  refs: string[];
-  score: number;
-  created_at: string;
-}
-
 interface PlannerTaskRow {
   id: string;
   title: string;
+  notes: string | null;
   state: string;
+  priority: number;
   due: string | null;
-  deleted: boolean;
   rev: number | null;
+  updated_at: string;
 }
 
 interface HistoryRow {
@@ -80,20 +87,25 @@ function dueLabel(iso: string | null): string {
   return new Date(iso + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
 }
 
-const toTask = (link: LinkRow, t: PlannerTaskRow): MyTask => ({
-  id: t.id,
-  itemKey: link.item_key,
-  title: t.title, // the Planner's current title — it may have been edited there
-  quadrant: link.quadrant,
-  due: dueLabel(t.due),
-  from: link.from_name ?? undefined,
-  action: link.action ?? undefined,
-  refs: link.refs,
-  takenAt: isoDate(new Date(link.created_at)),
-  done: t.state === "done" || t.state === "cancelled",
-  score: link.score,
-  rev: t.rev,
-});
+function toTask(t: PlannerTaskRow): MyTask {
+  const meta = parseNotes(t.notes);
+  const today = isoDate(new Date());
+  const done = t.state === "done" || t.state === "cancelled";
+  const due = dueLabel(t.due);
+  return {
+    id: t.id,
+    title: t.title, // the Planner's current title — it may have been edited there
+    quadrant: meta.quadrant ?? (t.due && t.due <= today ? "do" : t.priority <= 2 ? "schedule" : "later"),
+    due,
+    from: meta.from,
+    action: meta.action,
+    refs: meta.refs,
+    done,
+    closedOn: done ? isoDate(new Date(t.updated_at)) : undefined,
+    score: (6 - t.priority) * 10 + (due === "Overdue" || due === "Today" ? 15 : 0),
+    rev: t.rev,
+  };
+}
 
 const toHistory = (r: HistoryRow): HistoryEntry => {
   const at = new Date(r.created_at);
@@ -113,6 +125,7 @@ async function syncPush(items: PushItem[]) {
 
 /** Newest first. The latest one is what the Today tab shows. */
 export async function fetchBriefs(limit = 60): Promise<StoredBrief[]> {
+  if (mode === "local") return readLocal<StoredBrief[]>("briefs", []).slice(0, limit);
   const rows = check(
     await db().from("brief_reports").select("*").order("created_at", { ascending: false }).limit(limit),
   ) as BriefRow[];
@@ -120,6 +133,18 @@ export async function fetchBriefs(limit = 60): Promise<StoredBrief[]> {
 }
 
 export async function insertBrief(rawText: string, title: string, briefDate?: Date): Promise<StoredBrief> {
+  if (mode === "local") {
+    const now = new Date();
+    const brief: StoredBrief = {
+      id: crypto.randomUUID(),
+      title,
+      briefDate: isoDate(briefDate ?? now),
+      rawText,
+      createdAt: now.toISOString(),
+    };
+    writeLocal("briefs", [brief, ...readLocal<StoredBrief[]>("briefs", [])].slice(0, 60));
+    return brief;
+  }
   const row = check(
     await db()
       .from("brief_reports")
@@ -131,61 +156,44 @@ export async function insertBrief(rawText: string, title: string, briefDate?: Da
 }
 
 export async function deleteBrief(id: string) {
+  if (mode === "local") {
+    writeLocal("briefs", readLocal<StoredBrief[]>("briefs", []).filter((b) => b.id !== id));
+    return;
+  }
   check(await db().from("brief_reports").delete().eq("id", id));
 }
 
 // --- My Tasks (Planner tasks taken from briefs) -------------------------------
 
-/** Linked Planner tasks, newest first. Tasks deleted in the Planner drop out. */
+/** Every Planner task that came from a brief (found by its notes footer), not deleted. */
 export async function fetchTasks(): Promise<MyTask[]> {
-  const links = check(
-    await db().from("brief_task_links").select("*").order("created_at", { ascending: false }),
-  ) as LinkRow[];
-  if (!links.length) return [];
   const rows = check(
-    await db().from("tasks").select("id, title, state, due, deleted, rev").in("id", links.map((l) => l.task_id)),
+    await db()
+      .from("tasks")
+      .select("id, title, notes, state, priority, due, rev, updated_at")
+      .eq("deleted", false)
+      .ilike("notes", `%${NOTES_MARKER}%`)
+      .order("updated_at", { ascending: false })
+      .limit(500),
   ) as PlannerTaskRow[];
-  const byId = new Map(rows.map((r) => [r.id, r]));
-  return links.flatMap((l) => {
-    const t = byId.get(l.task_id);
-    return t && !t.deleted ? [toTask(l, t)] : [];
-  });
+  return rows.map(toTask);
 }
 
-/** Create the task in the Planner, then remember which brief item it came from. */
-export async function insertTask(item: BriefItem, brief: { id: string; title: string } | null): Promise<MyTask> {
-  const id = crypto.randomUUID();
+/** Create the task in the Planner. Its id comes from the account + brief item. */
+export async function insertTask(item: BriefItem, userId: string, briefTitle?: string): Promise<MyTask> {
+  const id = await taskIdFor(userId, item.id);
   const due = plannerDue(item);
+  const priority = plannerPriority(item.priority);
+  const notes = plannerNotes(item, briefTitle);
   const result = await syncPush([
     taskPush(
       id,
-      {
-        title: item.title,
-        notes: plannerNotes(item, brief?.title),
-        state: "open",
-        priority: plannerPriority(item.priority),
-        ...(due ? { due } : {}),
-      },
+      // deleted: false brings back a task that was taken before and then deleted
+      { title: item.title, notes, state: "open", priority, ...(due ? { due } : {}), deleted: false },
       null,
     ),
   ]);
-  const link = check(
-    await db()
-      .from("brief_task_links")
-      .insert({
-        item_key: item.id,
-        task_id: id,
-        brief_id: brief?.id ?? null,
-        quadrant: item.quadrant,
-        from_name: item.from ?? null,
-        action: item.action ?? null,
-        refs: item.refs,
-        score: item.score,
-      })
-      .select("*")
-      .single(),
-  ) as LinkRow;
-  return toTask(link, { id, title: item.title, state: "open", due: due ?? null, deleted: false, rev: result.rev ?? null });
+  return toTask({ id, title: item.title, notes, state: "open", priority, due: due ?? null, rev: result.rev ?? null, updated_at: new Date().toISOString() });
 }
 
 export async function setTaskDone(task: MyTask, done: boolean): Promise<number | null> {
@@ -196,28 +204,28 @@ export async function setTaskDone(task: MyTask, done: boolean): Promise<number |
 /** Deletes the task in the Planner too (soft delete, like the Planner's own delete). */
 export async function deleteTask(task: MyTask) {
   await syncPush([taskPush(task.id, { deleted: true }, task.rev)]);
-  check(await db().from("brief_task_links").delete().eq("task_id", task.id));
-}
-
-/** Hide finished tasks from My Tasks; they stay in the Planner as done. */
-export async function unlinkTasks(taskIds: string[]) {
-  if (taskIds.length) check(await db().from("brief_task_links").delete().in("task_id", taskIds));
 }
 
 // --- Dismissed items --------------------------------------------------------
 
 export async function fetchDismissed(): Promise<Set<string>> {
+  if (mode === "local") return new Set(readLocal<string[]>("dismissed", []));
   const rows = check(await db().from("brief_dismissed").select("item_key")) as { item_key: string }[];
   return new Set(rows.map((r) => r.item_key));
 }
 
 export async function insertDismissed(itemKey: string, title: string) {
+  if (mode === "local") {
+    writeLocal("dismissed", [...new Set([...readLocal<string[]>("dismissed", []), itemKey])]);
+    return;
+  }
   check(await db().from("brief_dismissed").upsert({ item_key: itemKey, title }));
 }
 
 // --- History ----------------------------------------------------------------
 
 export async function fetchHistory(limit = 300): Promise<HistoryEntry[]> {
+  if (mode === "local") return readLocal<HistoryEntry[]>("history", []).slice(0, limit);
   const rows = check(
     await db().from("brief_history").select("*").order("created_at", { ascending: false }).limit(limit),
   ) as HistoryRow[];
@@ -225,6 +233,12 @@ export async function fetchHistory(limit = 300): Promise<HistoryEntry[]> {
 }
 
 export async function insertHistory(action: HistoryAction, title: string, quadrant?: Quadrant): Promise<HistoryEntry> {
+  if (mode === "local") {
+    const at = new Date();
+    const entry: HistoryEntry = { id: crypto.randomUUID(), action, title, quadrant, date: isoDate(at), time: localTime(at) };
+    writeLocal("history", [entry, ...readLocal<HistoryEntry[]>("history", [])].slice(0, 300));
+    return entry;
+  }
   const row = check(
     await db().from("brief_history").insert({ action, title, quadrant: quadrant ?? null }).select("*").single(),
   ) as HistoryRow;
@@ -235,23 +249,24 @@ export async function insertHistory(action: HistoryAction, title: string, quadra
 
 export type Table = "briefs" | "tasks" | "dismissed_items" | "history";
 
-const SOURCES: { table: string; refresh: Table }[] = [
-  { table: "brief_reports", refresh: "briefs" },
-  { table: "brief_task_links", refresh: "tasks" },
-  { table: "sync_signals", refresh: "tasks" }, // bumped by the Planner on every task change, from any device
-  { table: "brief_dismissed", refresh: "dismissed_items" },
-  { table: "brief_history", refresh: "history" },
-];
-
 /**
- * Calls onChange(kind) whenever stored data changes — from this tab, another tab,
- * another device, or the Planner app itself. Returns an unsubscribe function.
+ * Calls onChange(kind) whenever stored data changes — from another tab, another
+ * device, or the Planner app itself. Returns an unsubscribe function.
  */
 export function subscribeToChanges(onChange: (table: Table) => void): () => void {
   const client = db();
   const channel = client.channel("daily-brief-changes");
-  for (const s of SOURCES) {
-    channel.on("postgres_changes", { event: "*", schema: "public", table: s.table }, () => onChange(s.refresh));
+  // The Planner bumps sync_signals on every task change, from any device.
+  channel.on("postgres_changes", { event: "*", schema: "public", table: "sync_signals" }, () => onChange("tasks"));
+  if (mode === "supabase") {
+    const tables: [string, Table][] = [
+      ["brief_reports", "briefs"],
+      ["brief_dismissed", "dismissed_items"],
+      ["brief_history", "history"],
+    ];
+    for (const [table, kind] of tables) {
+      channel.on("postgres_changes", { event: "*", schema: "public", table }, () => onChange(kind));
+    }
   }
   channel.subscribe();
   return () => {

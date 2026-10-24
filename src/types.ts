@@ -22,15 +22,14 @@ export interface HistoryEntry {
 /** A brief item the user has taken on ("Take" on the Today tab) — a real Planner task. */
 export interface MyTask {
   id: string; // the Planner task's id
-  itemKey: string; // BriefItem.id it came from
   title: string;
   quadrant: Quadrant;
   due: string;
   from?: string;
   action?: string;
   refs: string[];
-  takenAt: string; // local ISO date
   done: boolean;
-  score: number; // importance from the brief analysis; higher sorts first
+  closedOn?: string; // local ISO date it was last changed, when done — "Closed today"
+  score: number; // higher sorts first (from Planner priority and due date)
   rev: number | null; // Planner row revision, sent as base_rev on updates
 }

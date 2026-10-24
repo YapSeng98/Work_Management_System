@@ -3,6 +3,7 @@ import type { MyTask, Quadrant } from "../types";
 import { Card, SectionHeader } from "./Card";
 import { CheckIcon, ListChecksIcon, XIcon } from "./icons";
 import { PLANNER_URL } from "../lib/planner";
+import { isoDate } from "../lib/dates";
 
 function PlannerNote() {
   return (
@@ -27,17 +28,16 @@ export function MyTasksView({
   tasks,
   onToggleDone,
   onRemove,
-  onClearDone,
 }: {
   tasks: MyTask[];
   onToggleDone: (task: MyTask) => void;
   onRemove: (task: MyTask) => void;
-  onClearDone: () => void;
 }) {
   const open = tasks.filter((t) => !t.done);
-  const done = tasks.filter((t) => t.done);
+  // Done tasks close automatically: they show under "Closed today" for the rest of the day.
+  const done = tasks.filter((t) => t.done && t.closedOn === isoDate(new Date()));
 
-  if (tasks.length === 0) {
+  if (open.length === 0 && done.length === 0) {
     return (
       <Card>
         <SectionHeader icon={<ListChecksIcon />} label="My Tasks" />
@@ -76,23 +76,7 @@ export function MyTasksView({
         <Card>
           <SectionHeader
             icon={<CheckIcon size={14} />}
-            label={`Done (${done.length})`}
-            right={
-              <button
-                onClick={onClearDone}
-                style={{
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                  padding: "6px 12px",
-                  borderRadius: 7,
-                  border: "1.5px solid var(--border)",
-                  background: "var(--card)",
-                  color: "var(--text-muted)",
-                }}
-              >
-                Hide done
-              </button>
-            }
+            label={`Closed today (${done.length})`}
           />
           <TaskList tasks={done} onToggleDone={onToggleDone} onRemove={onRemove} />
         </Card>
@@ -156,7 +140,7 @@ function TaskList({
             </div>
             {!t.done && t.action && <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 3 }}>→ {t.action}</div>}
             <div style={{ fontSize: 12, color: "var(--text-faint)", marginTop: 3 }}>
-              {[t.due && `due ${t.due.toLowerCase()}`, t.from && `from ${t.from}`, `taken ${t.takenAt}`].filter(Boolean).join(" · ")}
+              {[t.due && `due ${t.due.toLowerCase()}`, t.from && `from ${t.from}`, t.refs.length ? t.refs.join(", ") : undefined].filter(Boolean).join(" · ")}
             </div>
           </div>
           <button
