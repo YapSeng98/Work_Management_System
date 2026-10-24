@@ -2,8 +2,11 @@ import type { Quadrant } from "../../types";
 
 export type Priority = "critical" | "high" | "medium" | "low";
 export type ItemKind = "reply" | "action" | "decision" | "follow_up" | "fyi";
-/** me = the next move is yours (or your team's); others = you're waiting on / chasing someone; fyi = no action. */
-export type Owner = "me" | "others" | "fyi";
+/**
+ * me = the next move is yours; team = a colleague owns the next move (not your task);
+ * others = waiting on the customer / a third party; fyi = no action.
+ */
+export type Owner = "me" | "team" | "others" | "fyi";
 
 export interface BriefItem {
   id: string;
@@ -20,6 +23,10 @@ export interface BriefItem {
   refs: string[];
   owner: Owner;
   ownerReason: string;
+  ownerName?: string; // who owns it, when the brief names someone
+  suggestedReply?: string;
+  canClose?: boolean;
+  waitingOnCustomer?: boolean; // also listed as waiting on the customer
   topRank?: number;
   due: string; // "Today", "Tomorrow", "This week", "Overdue", a short date, or ""
   dueDate?: string; // exact ISO date when the source gives one (JSON block)
@@ -43,7 +50,7 @@ export interface BriefCount {
 }
 
 export interface ParsedBrief {
-  format: "json" | "executive" | "daily";
+  format: "json" | "ownership" | "executive" | "daily";
   title: string;
   date?: Date;
   items: BriefItem[];

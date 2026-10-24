@@ -23,6 +23,7 @@ export function BriefView({
   const shared = { statusOf, sinceOf };
   const visible = brief.items.filter((i) => !hidden(i.id));
   const mine = visible.filter((i) => i.owner === "me");
+  const team = visible.filter((i) => i.owner === "team");
   const chase = visible.filter((i) => i.owner === "others");
   const fyi = visible.filter((i) => i.owner === "fyi");
   const doToday = mine.filter((i) => i.quadrant === "do" && statusOf(i) !== "taken").length;
@@ -33,7 +34,8 @@ export function BriefView({
         tiles={[
           { value: String(doToday), label: "to do today", accent: true },
           { value: String(mine.length), label: "pending you" },
-          { value: String(chase.length), label: "to chase" },
+          ...(team.length ? [{ value: String(team.length), label: "owned by your team" }] : []),
+          { value: String(chase.length), label: "waiting on others" },
           { value: String(brief.meetings.length), label: "meetings" },
         ]}
       />
@@ -66,6 +68,17 @@ export function BriefView({
         onTake={onTake}
         onDismiss={onDismiss}
       />
+      {team.length > 0 && (
+        <ItemList
+          icon={<FlagIcon />}
+          label="Owned by your team — not your task, monitor only"
+          items={team}
+          empty=""
+          {...shared}
+          onTake={onTake}
+          onDismiss={onDismiss}
+        />
+      )}
       <ItemList
         icon={<ReplyIcon />}
         label="Waiting on others — chase / follow up"

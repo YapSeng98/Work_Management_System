@@ -62,6 +62,8 @@ export function plannerNotes(item: BriefItem, briefTitle?: string): string {
     item.status && `Status: ${item.status}`,
     item.summary,
     item.refs.length ? `Tickets: ${item.refs.join(", ")}` : undefined,
+    item.suggestedReply && `Suggested reply: ${item.suggestedReply}`,
+    item.ownerName && `Owner: ${item.ownerName}`,
     [item.from && `From: ${item.from}`, item.customer && `Customer: ${item.customer}`].filter(Boolean).join(" · ") || undefined,
     `${NOTES_MARKER} ${quadrantLabel[item.quadrant]}${briefTitle ? ` · ${briefTitle}` : ""}`,
   ]

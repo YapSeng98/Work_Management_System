@@ -43,8 +43,8 @@ function ownerOf(waitingOn: string | undefined, type: string | undefined): { own
   if (type === "fyi" || waitingOn === "none") return { owner: "fyi", reason: "FYI only" };
   if (waitingOn === "customer") return { owner: "others", reason: "Waiting on customer" };
   if (waitingOn === "third_party") return { owner: "others", reason: "Waiting on a third party" };
-  if (waitingOn === "my_team") return { owner: "me", reason: "Waiting on your team" };
-  return { owner: "me", reason: "Waiting on you" };
+  if (waitingOn === "my_team") return { owner: "team", reason: "Owned by your team" };
+  return { owner: "me", reason: "Reply or action expected from you" };
 }
 
 const KINDS: ItemKind[] = ["reply", "action", "decision", "follow_up", "fyi"];
@@ -84,7 +84,10 @@ export function parseJsonBrief(data: Record<string, unknown>): ParsedBrief {
         stage: str(x.stage),
         refs,
         owner,
-        ownerReason: reason,
+        ownerReason: owner === "team" && str(x.owner) ? `Owned by ${str(x.owner)}` : reason,
+        ownerName: owner === "me" ? undefined : str(x.owner),
+        suggestedReply: str(x.recommended_reply),
+        canClose: x.can_close === true || undefined,
         topRank,
         due,
         dueDate: dueDay,

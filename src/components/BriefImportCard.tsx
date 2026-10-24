@@ -59,6 +59,7 @@ export function BriefImportCard({
 
   const open = !brief || editing;
   const mine = brief?.items.filter((i) => i.owner === "me").length ?? 0;
+  const team = brief?.items.filter((i) => i.owner === "team").length ?? 0;
   const chase = brief?.items.filter((i) => i.owner === "others").length ?? 0;
 
   return (
@@ -90,8 +91,9 @@ export function BriefImportCard({
       />
       {brief && !editing && (
         <div style={{ fontSize: 14, color: "var(--text-muted)" }}>
-          <strong style={{ color: "var(--text)" }}>{brief.title}</strong> — {mine} pending you, {chase} to chase,{" "}
-          {brief.meetings.length} meetings.
+          <strong style={{ color: "var(--text)" }}>{brief.title}</strong> — {mine} pending you,
+          {team ? ` ${team} owned by your team,` : ""} {chase} waiting on others
+          {brief.meetings.length ? `, ${brief.meetings.length} meetings` : ""}.
           <span style={{ color: "var(--text-faint)" }}>
             {" "}
             {brief.format === "json" ? "Read from the structured data block." : "Read from the report text."}

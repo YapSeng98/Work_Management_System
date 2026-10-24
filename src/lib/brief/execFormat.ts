@@ -88,18 +88,20 @@ const HEADER_WORDS = [
   "estimated impact",
   "priority",
   "count",
+  "category",
+  "why it matters",
 ];
 // Longest first so "next action required" wins over "next action".
 const HEADERS_BY_LENGTH = [...HEADER_WORDS].sort((a, b) => b.length - a.length);
 
-type Row = Record<string, string>;
+export type Row = Record<string, string>;
 
 /**
  * Tables lose their structure when copied: cells are tab separated and the
  * header's last cell is often glued to the first data cell ("CountNeed My Reply").
  * This splits a header line off and returns rows keyed by header name.
  */
-class TableReader {
+export class TableReader {
   private headers: string[] = [];
 
   reset() {
@@ -158,12 +160,12 @@ const STOPWORDS = new Set(
     "issue issues request requested requests check monitor obtain validate validation verify verification coordinate continue " +
     "complete confirm prepare send chase support customer customers activants team status action next today tomorrow week " +
     "item items task tasks fix fixed problem incident ticket uat sit prod production deployment deploy deployed environment " +
-    "progress maintained open queries questions function enhancement"
+    "progress maintained open queries questions function enhancement cr md awaiting response technical"
   ).split(" "),
 );
 
 /** Significant words, crudely stemmed (first 6 letters) so "interfaced" ≈ "interface". */
-function keywords(text: string): Set<string> {
+export function keywords(text: string): Set<string> {
   const out = new Set<string>();
   const cleaned = text.replace(REF_STRIP, " ");
   for (const raw of cleaned.split(/[^A-Za-z0-9]+/)) {
@@ -172,7 +174,7 @@ function keywords(text: string): Set<string> {
     if (raw.length < 3 && !acronym) continue;
     const w = raw.toLowerCase();
     if (STOPWORDS.has(w) || /^\d+$/.test(w)) continue;
-    out.add(w.slice(0, 6));
+    out.add((w.length > 4 ? w.replace(/([^s])s$/, "$1") : w).slice(0, 6)); // "fields" ≈ "field", "assess" kept
   }
   return out;
 }
@@ -182,7 +184,7 @@ function acronymsIn(text: string): Set<string> {
 }
 const REF_STRIP = /\b(?:INC|SR|IN|CR|CHG|RITM|REQ|PRB)\d{5,}\b|\b[A-Z][A-Z0-9]*-\d{6,}\b/g;
 
-interface Acc {
+export interface Acc {
   refs: Set<string>;
   words: Set<string>;
   title?: string;
@@ -203,10 +205,14 @@ interface Acc {
   owners: { owner: Owner; reason: string }[];
   reasons: string[];
   topRank?: number;
+  ownerName?: string;
+  suggestedReply?: string;
+  canClose?: boolean;
 }
 
-interface Mention {
+export interface Mention {
   text: string; // used for ticket refs and keyword matching
+  passing?: boolean; // a reference to an item (Top 10 row, risk line) rather than an item itself
   matchText?: string; // extra words for matching (e.g. an escalation's description)
   title?: string;
   titleWeight?: number;
@@ -226,12 +232,15 @@ interface Mention {
   owner?: Owner;
   reason?: string;
   topRank?: number;
+  ownerName?: string;
+  suggestedReply?: string;
+  canClose?: boolean;
 }
 
-class Merger {
+export class Merger {
   items: Acc[] = [];
 
-  find(refs: string[], words: Set<string>, acronyms: Set<string>): Acc | undefined {
+  find(refs: string[], words: Set<string>, acronyms: Set<string>, passing: boolean): Acc | undefined {
     if (refs.length) {
       const byRef = this.items.find((a) => refs.some((r) => a.refs.has(r)));
       if (byRef) return byRef;
@@ -245,17 +254,21 @@ class Merger {
       let score = 0;
       for (const w of words) if (a.words.has(w)) score++;
       const coverage = score / Math.max(1, Math.min(words.size, a.words.size));
-      if (score >= 2 && coverage < 0.6) continue;
+      if (score >= 2 && score < 4 && coverage < 0.6) continue;
       if (score > bestScore) {
         best = a;
         bestScore = score;
       }
     }
     if (bestScore >= 2) return best;
-    if (bestScore === 1 && best) {
-      const shared = [...words].find((w) => best.words.has(w))!;
-      const unique = this.items.filter((a) => a.words.has(shared)).length === 1;
-      if (unique && acronyms.has(shared) && !refs.length) return best;
+    // One shared word is enough only for a distinctive acronym (e.g. GST, ABC) held by a
+    // single item — and only for a passing mention (a Top-10 row, a risk line) without its
+    // own ticket number, never to fold one real item into another.
+    if (passing && !refs.length) {
+      for (const w of acronyms) {
+        const holders = this.items.filter((a) => a.words.has(w));
+        if (holders.length === 1) return holders[0];
+      }
     }
     return undefined;
   }
@@ -264,7 +277,7 @@ class Merger {
     const refs = refsIn(m.text);
     const matchText = `${m.title ?? m.text} ${m.matchText ?? ""}`;
     const words = keywords(matchText);
-    let acc = this.find(refs, words, acronymsIn(m.title ?? m.text));
+    let acc = this.find(refs, words, acronymsIn(m.title ?? m.text), !!m.passing);
     if (!acc) {
       acc = { refs: new Set(), words: new Set(), titleWeight: -1, from: [], escalation: false, personal: false, summary: [], dueText: [], owners: [], reasons: [] };
       this.items.push(acc);
@@ -291,6 +304,9 @@ class Merger {
     if (m.owner) acc.owners.push({ owner: m.owner, reason: m.reason ?? "" });
     else if (m.reason) acc.reasons.push(m.reason);
     if (m.topRank && (!acc.topRank || m.topRank < acc.topRank)) acc.topRank = m.topRank;
+    acc.ownerName ??= m.ownerName;
+    acc.suggestedReply ??= m.suggestedReply;
+    acc.canClose ??= m.canClose;
     return acc;
   }
 }
@@ -511,6 +527,7 @@ export function parseExecutiveBrief(text: string): ParsedBrief {
           text: line,
           title: line.replace(/\.$/, ""),
           titleWeight: 0,
+          passing: true,
           risk: level,
           priority: level === "critical" ? "high" : "medium",
           reason: `Risk: ${level ?? "flagged"}`,
@@ -527,6 +544,7 @@ export function parseExecutiveBrief(text: string): ParsedBrief {
             text: task,
             title: task,
             titleWeight: 0,
+            passing: true,
             topRank: rank,
             summary: row["expected outcome"] ?? row["estimated impact"],
             kind: "action",

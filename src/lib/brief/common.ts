@@ -74,14 +74,14 @@ export function rankItem(s: {
 
   let quadrant: Quadrant;
   if (s.owner === "fyi") quadrant = "later";
-  else if (s.owner === "others") quadrant = "delegate";
+  else if (s.owner === "others" || s.owner === "team") quadrant = "delegate";
   else if (urgentDue || s.priority === "critical" || s.escalation || (s.topRank !== undefined && s.topRank <= 3)) quadrant = "do";
   else if (s.priority === "high" || s.topRank !== undefined || s.due) quadrant = "schedule";
   else quadrant = "later";
   return { score, quadrant };
 }
 
-const ownerOrder: Record<Owner, number> = { me: 0, others: 1, fyi: 2 };
+const ownerOrder: Record<Owner, number> = { me: 0, team: 1, others: 2, fyi: 3 };
 
 export function sortItems(items: BriefItem[]) {
   return items.sort((a, b) => ownerOrder[a.owner] - ownerOrder[b.owner] || b.score - a.score);

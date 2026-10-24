@@ -62,13 +62,22 @@ export function BriefItemRow({
           )}
           {item.personal && <Pill label="FOR YOU" bg="var(--schedule-bg)" color="var(--schedule-text)" />}
           {item.waitingSince && <Pill label={`WAITING SINCE ${item.waitingSince.toUpperCase()}`} bg="var(--badge-warn-bg)" color="var(--badge-warn-text)" />}
+          {item.waitingOnCustomer && <Pill label="AWAITING CUSTOMER" bg="var(--delegate-bg)" color="var(--delegate-text)" />}
+          {item.canClose && <Pill label="CAN CLOSE" bg="var(--later-bg)" color="var(--later-text)" />}
           {item.due && <Pill label={`DUE ${item.due.toUpperCase()}`} bg="var(--badge-urgent-bg)" color="var(--badge-urgent-text)" />}
           {since && <Pill label={`PENDING SINCE ${since.toUpperCase()}`} bg="var(--badge-warn-bg)" color="var(--badge-warn-text)" />}
           {status === "done" && <Pill label="DONE BEFORE" bg="var(--later-bg)" color="var(--later-text)" />}
         </div>
         <div style={{ fontSize: 14.5, fontWeight: 600, overflowWrap: "anywhere" }}>{item.title}</div>
         <div style={{ fontSize: 12, color: "var(--text-faint)" }}>
-          {[item.customer, item.from && `from ${item.from}`, kindLabel[item.kind], item.stage && `stage: ${item.stage}`, item.ownerReason]
+          {[
+            item.customer,
+            item.ownerName && `owner: ${item.ownerName}`,
+            item.from && `last from ${item.from}`,
+            kindLabel[item.kind],
+            item.stage && `stage: ${item.stage}`,
+            item.ownerName && item.ownerReason.startsWith("Owned by") ? undefined : item.ownerReason,
+          ]
             .filter(Boolean)
             .join(" · ")}
         </div>
@@ -84,6 +93,20 @@ export function BriefItemRow({
           </div>
         )}
         {item.timeline && <div style={{ fontSize: 12, color: "var(--text-faint)" }}>⏱ {item.timeline}</div>}
+        {item.suggestedReply && (
+          <div
+            style={{
+              fontSize: 13,
+              color: "var(--text-muted)",
+              background: "var(--bg)",
+              borderLeft: "3px solid var(--schedule-text)",
+              borderRadius: 4,
+              padding: "6px 10px",
+            }}
+          >
+            <span style={{ color: "var(--schedule-text)", fontWeight: 600 }}>Suggested reply:</span> {item.suggestedReply}
+          </div>
+        )}
       </div>
 
       {onTake && (

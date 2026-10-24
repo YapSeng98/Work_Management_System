@@ -48,7 +48,7 @@ Pushing to `main` deploys to GitHub Pages via `.github/workflows/deploy.yml`.
 | --- | --- |
 | `src/App.tsx` | Auth gate: setup notice → sign-in → workspace |
 | `src/Workspace.tsx` | Today / My Tasks / History tabs and all handlers |
-| `src/lib/brief/` | Analyses a pasted brief: `jsonFormat` (structured block), `execFormat` (Executive Work Brief), `dailyFormat` (older Daily Work Brief) |
+| `src/lib/brief/` | Analyses a pasted brief: `jsonFormat` (structured block), `ownershipFormat` (Section A/B/C report), `execFormat` (Executive Work Brief), `dailyFormat` (older Daily Work Brief) |
 | `src/lib/db.ts` | All Supabase reads/writes (brief_* tables, Planner tasks via sync_push) |
 | `src/lib/planner.ts` | Planner bridge: username login, priority / due / notes mapping, push items |
 | `src/lib/supabase.ts` | Supabase client from `VITE_SUPABASE_*` env vars |
@@ -62,12 +62,19 @@ as it's pasted and saved to the `briefs` table. Three layouts are understood, tr
 
 1. **Structured JSON block** — most reliable. **Copy AI instructions** (on the paste
    box) copies a section to append to your AI prompt; the AI then ends its report with
-   a JSON block listing every item once, with owner, urgency, risk, due date and Top-10 rank.
-2. **Executive Work Brief** — the `=====`-divided report (Requires my response,
+   a JSON block listing every item once, with owner, urgency, risk, due date, Top-10 rank
+   and a suggested reply.
+2. **Ownership report** — Section A (my actions only), Section B (team actions),
+   Section C (waiting on customer), Escalations, Aging items, Top 10, Executive summary.
+   The brief's own split decides ownership: A → *Pending you*, B → *Owned by your team*
+   (shown separately, not your task), C → *Waiting on others* (or an "awaiting customer"
+   badge when A/B also own it). Your name is read from the brief ("Required Action From …")
+   to tell your Top-10 rows from colleagues'.
+3. **Executive Work Brief** — the earlier `=====`-divided report (Requires my response,
    Escalations, Open support incidents, UAT tracker, Customer follow-up, Risks, Top 10,
    Personal attention). Tables pasted as tab-separated text are reconstructed, and every
    mention of the same ticket (or the same thread, by subject keywords) is merged into one item.
-3. **Daily Work Brief** — the earlier emoji-section layout.
+4. **Daily Work Brief** — the earlier emoji-section layout.
 
 Items are grouped as:
 
