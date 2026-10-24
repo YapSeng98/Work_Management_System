@@ -254,7 +254,10 @@ export class Merger {
       let score = 0;
       for (const w of words) if (a.words.has(w)) score++;
       const coverage = score / Math.max(1, Math.min(words.size, a.words.size));
-      if (score >= 2 && score < 4 && coverage < 0.6) continue;
+      // 4+ shared words always count; a passing mention (Top 10 row, aging line) needs 3;
+      // otherwise the shared words must cover most of the shorter description.
+      const strong = score >= 4 || (passing && score >= 3);
+      if (score >= 2 && !strong && coverage < 0.6) continue;
       if (score > bestScore) {
         best = a;
         bestScore = score;

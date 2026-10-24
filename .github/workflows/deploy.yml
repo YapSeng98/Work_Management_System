@@ -24,6 +24,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm test # analyser + Planner-bridge regression tests; a failure stops the deploy
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

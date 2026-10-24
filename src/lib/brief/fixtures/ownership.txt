@@ -1,0 +1,136 @@
+EXECUTIVE WORK BRIEF
+
+Focused on the latest actionable state. All names and tickets in this file are made up.
+
+EXECUTIVE SUMMARY
+Category	Count🔴 My Actions	3
+🟠 Team Actions	3
+🟢 Waiting On Customer	2
+🚨 Escalations	2
+⚠ Aging Items	3
+🔴 SECTION A - MY ACTIONS ONLY
+CRITICAL
+1. Payroll Export Failure
+
+Customer: Acme Health / Priya Nair
+ Subject: INC0011111: Payroll export failing nightly
+ Ticket: INC0011111
+ Owner: Jane Tan
+ Current Status: Customer escalated after third failure.
+ Last Action By: Priya Nair
+ Customer Waiting?: Yes
+ Customer Waiting Since: 2 Oct 2026
+ Required Action From Jane Tan: Confirm root cause and fix date.
+ Due Date: Today
+ Risk: High because payroll is blocked.
+ Recommended Reply: Share the root cause and commit to a fix date today.
+
+HIGH
+2. ERP Release Questions
+
+Customer: Globex
+ Subject: RE: ERP - items for 30/10 release
+ Ticket: SR2222222 / IN3333333
+ Owner: Jane Tan (question addressed directly)
+ Current Status: Customer asked whether a restart is needed after the patch.
+ Last Action By: Omar Haddad
+ Customer Waiting?: Yes
+ Required Action From Jane Tan: Answer restart question.
+ Risk: Release confusion.
+ Recommended Reply: Confirm no restart is needed and list the post-deploy checks.
+
+MEDIUM
+3. ERP Report Extra Columns
+
+Customer: Acme Health
+ Subject: RE: [For Assessment] ERP Report - Extra Columns For Ledger View
+ Ticket: CR Assessment
+ Owner: Jane Tan
+ Current Status: Customer asks whether extra columns slow the report.
+ Last Action By: Lee Chen
+ Customer Waiting?: Yes
+ Required Action From Jane Tan: Performance assessment.
+ Due Date: Not stated
+ Risk: Low.
+ Recommended Reply: Provide a performance estimate for the extra columns.
+
+🟠 SECTION B - TEAM ACTIONS
+
+These are not Jane Tan actions.
+
+Warehouse Onboarding / New Site Code
+
+Ticket: Warehouse onboarding estimate
+ Owner: Alex Lim
+ Status: Estimate sent; quote pending.
+ Next Action: Alex to finalise quote.
+ Waiting On: Customer review.
+ Risk: Medium.
+
+Invoice Resubmission Bug
+
+Ticket: INC0044444
+ Owner: Support team / Sam Wong
+ Status: Root cause under investigation.
+ Waiting On: Support owner.
+ Risk: High because billing is blocked.
+
+Mobile App Upload Enhancement
+
+Ticket: MAU Change Request
+ Owner: Alex Lim / CR Team
+ Status: Customer wants a larger upload limit.
+ Waiting On: CR scoping.
+ Risk: Medium.
+
+🟢 SECTION C - WAITING ON CUSTOMER
+Payroll Export Failure
+
+Customer: Acme Health
+ Ticket: INC0011111
+ Last Team Update: Workaround provided.
+ Days Waiting: 2
+ Next Follow-Up: Tomorrow.
+ Can Close?: N
+
+Warehouse Onboarding
+
+Customer: Acme Health
+ Ticket: Warehouse onboarding estimate
+ Last Team Update: Estimate delivered.
+ Days Waiting: Customer review phase.
+ Can Close?: N
+
+🚨 ESCALATIONS
+1. Invoice Resubmission Incident
+
+Issue: Users cannot resubmit invoices.
+ Owner: Support team.
+ Current Blocker: Investigation pending.
+ Escalation Probability: HIGH
+
+2. Data Center Migration Risk
+
+Issue: Migration window may slip.
+ Owner: Infra team
+ Current Blocker: Vendor confirmation.
+ Escalation Probability: MEDIUM-HIGH
+
+⚠ AGING ITEMS
+HIGH
+Invoice resubmission incident pending investigation.
+MEDIUM
+Extra report columns CR awaiting assessment.
+Data center migration vendor confirmation outstanding.
+📅 MONDAY MORNING PRIORITIES (TOP 10)
+#	Task	Ticket	Owner	Why It Matters	Expected Outcome1	Reply on payroll export failure	INC0011111	Jane Tan	Customer escalated	Fix date agreed
+2	Answer release restart question	SR2222222	Jane Tan	Release clarity	Smooth release
+3	Assess report column performance	ERP Report CR	Jane Tan	Customer blocked	Recommendation sent
+4	Review invoice resubmission status	INC0044444	Support Team	Billing blocked	Investigation progress
+5	Chase MAU scope updates	MAU CR	Alex	CR progressing	Scope agreed
+EXECUTIVE RECOMMENDATION
+1. What Jane Tan should do first today
+
+Reply on payroll export.
+
+Bottom line: Three items need Jane Tan today; the rest is owned by the team or waiting on the customer.

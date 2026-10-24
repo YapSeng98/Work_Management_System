@@ -74,21 +74,21 @@ export function SetupNotice() {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, boxSizing: "border-box" }}>
+    <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, boxSizing: "border-box" }}>
       <div style={{ width: "100%", maxWidth: 380, display: "flex", flexDirection: "column", gap: 20 }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}>
           <span className="icon-tile icon-tile--ai" style={{ width: 48, height: 48, borderRadius: 14 }}>
             <SparklesIcon size={24} />
           </span>
           <div>
-            <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>
               Daily <span className="gradient-text">Brief</span>
-            </div>
+            </h1>
             <div style={{ fontSize: 13, color: "var(--text-muted)" }}>Your AI work triage, synced with your Planner</div>
           </div>
         </div>
         {children}
       </div>
-    </div>
+    </main>
   );
 }

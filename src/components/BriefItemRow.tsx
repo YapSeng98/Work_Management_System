@@ -42,7 +42,7 @@ export function BriefItemRow({
   const taken = status === "taken";
 
   return (
-    <div className="item" style={{ opacity: taken ? 0.62 : 1 }}>
+    <div className="item" style={taken ? { background: "var(--divider)" } : undefined}>
       <span className="item__bar" style={{ background: q.text }} />
       <div style={{ flex: "1 1 300px", minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>

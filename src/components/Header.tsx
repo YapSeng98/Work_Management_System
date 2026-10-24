@@ -29,7 +29,7 @@ export function Header({
           <SparklesIcon size={17} />
         </span>
         <div style={{ lineHeight: 1.15 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-0.01em" }}>Daily Brief</div>
+          <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: "-0.01em" }}>Daily Brief</h1>
           <div style={{ fontSize: 11, color: "var(--text-faint)" }}>AI work triage</div>
         </div>
       </div>

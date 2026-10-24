@@ -33,7 +33,10 @@ export function extractBriefJson(text: string): Record<string, unknown> | null {
   return null;
 }
 
-const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+const str = (v: unknown) => {
+  const s = typeof v === "string" ? v.trim() : typeof v === "number" ? String(v) : "";
+  return s && s.toLowerCase() !== "null" ? s : undefined;
+};
 const isoDay = (v: unknown) => {
   const s = str(v);
   return s && /^\d{4}-\d{2}-\d{2}/.test(s) ? s.slice(0, 10) : undefined;
@@ -58,7 +61,8 @@ export function parseJsonBrief(data: Record<string, unknown>): ParsedBrief {
     .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
     .map((x) => {
       const title = str(x.title) ?? str(x.subject) ?? "Untitled item";
-      const tickets = Array.isArray(x.tickets) ? x.tickets.map(String) : [];
+      // "tickets" may come back as a list or as one string ("INC1, SR2")
+      const tickets = (Array.isArray(x.tickets) ? x.tickets.map(String) : (str(x.tickets) ?? "").split(/[,;\s]+/)).filter(Boolean);
       const refs = [...new Set([...tickets, ...refsIn(`${title} ${str(x.subject) ?? ""}`)])];
       const type = str(x.type)?.toLowerCase();
       const kind: ItemKind = KINDS.includes(type as ItemKind) ? (type as ItemKind) : "action";
@@ -67,8 +71,9 @@ export function parseJsonBrief(data: Record<string, unknown>): ParsedBrief {
       const risk = toPriority(x.risk);
       const dueDay = isoDay(x.due);
       const due = dueDay ? dueFromDate(dueDay, ref) : dueFromText(str(x.due) ?? "");
-      const topRank = Number.isInteger(x.top_rank) && (x.top_rank as number) > 0 ? (x.top_rank as number) : undefined;
-      const escalation = x.escalation === true;
+      const rank = Number(x.top_rank);
+      const topRank = x.top_rank != null && Number.isInteger(rank) && rank > 0 ? rank : undefined;
+      const escalation = x.escalation === true || x.escalation === "true";
       const since = isoDay(x.waiting_since);
       const { score, quadrant } = rankItem({ priority, owner, kind, due, topRank, escalation });
       return {

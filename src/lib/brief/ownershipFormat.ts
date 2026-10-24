@@ -15,14 +15,28 @@ import type { BriefCount, BriefItem, ItemKind, Owner, ParsedBrief, Priority } fr
  */
 
 export function looksLikeOwnershipBrief(text: string) {
-  return /MY ACTIONS/.test(text) && /(SECTION B|TEAM ACTIONS|WAITING ON CUSTOMER)/.test(text);
+  return /\bmy actions\b/i.test(text) && /(section b\b|team actions|waiting on customer)/i.test(text);
 }
 
 type Section = "summary" | "mine" | "team" | "customer" | "escalations" | "aging" | "top" | "ignore";
 
 function sectionOf(line: string): Section | null {
   const t = line.replace(/^[^A-Za-z0-9]+/, "").trim().toLowerCase();
-  if (!t || t.length > 70 || line !== line.toUpperCase()) return null; // headings are upper case
+  if (!t || t.length > 70) return null;
+  if (line !== line.toUpperCase()) {
+    // A Title-case heading: no colon or full stop, and the section name starts the line
+    // (so a sentence such as "Waiting on customer feedback." is never taken for one).
+    if (/[:\t|]/.test(line) || line.endsWith(".")) return null; // fields, table rows, sentences
+    if (/^executive summary\b/.test(t)) return "summary";
+    if (/^(section a\b|my actions\b)/.test(t)) return "mine";
+    if (/^(section b\b|(\w+ )?team actions\b)/.test(t)) return "team";
+    if (/^(section c\b|waiting on customer\b)/.test(t)) return "customer";
+    if (/^escalations\b/.test(t)) return "escalations";
+    if (/^(aging items|risks)\b/.test(t)) return "aging";
+    if (/^((\w+ ){0,3}priorities\b|top \d+ priorities)/.test(t)) return "top";
+    if (/^(executive )?recommendation|^executive work brief/.test(t)) return "ignore";
+    return null;
+  }
   if (/^executive summary/.test(t)) return "summary";
   if (/section a\b|my actions/.test(t)) return "mine";
   if (/section b\b|team actions/.test(t)) return "team";
@@ -144,7 +158,10 @@ export function parseOwnershipBrief(text: string): ParsedBrief {
       note(v);
       entry.matchText = `${entry.matchText ?? ""} ${v}`;
     }
-    else if (name.includes("blocker")) note(`Blocked by: ${v}`);
+    else if (name.includes("blocker")) {
+      note(`Blocked by: ${v}`);
+      entry.matchText = `${entry.matchText ?? ""} ${v}`;
+    }
     else if (name.includes("last") && name.includes("update")) note(`Last update: ${v}`);
     else if (name === "days waiting") {
       if (/\d/.test(v)) entry.waitingSince ??= `${v.match(/\d+/)![0]} days`;

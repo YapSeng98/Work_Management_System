@@ -263,6 +263,7 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
           }
         />
 
+        <main style={{ display: "flex", flexDirection: "column", gap: 18 }}>
         {error && (
           <Card style={{ borderColor: "var(--badge-urgent-text)" }}>
             <div style={{ display: "flex", alignItems: "flex-start", gap: 12, fontSize: 14, color: "var(--do-text)" }}>
@@ -326,6 +327,7 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
             )}
           </>
         )}
+        </main>
       </div>
     </div>
   );

@@ -22,10 +22,10 @@
 
   --text: #0f172a;
   --text-muted: #475569;
-  --text-faint: #94a3b8;
+  --text-faint: #5b6676; /* ≥ 4.5:1 on white and tinted cards */
 
-  --accent: #7c3aed;
-  --accent-strong: #6d28d9;
+  --accent: #6d28d9;
+  --accent-strong: #5b21b6;
   --accent-tint: rgba(124, 58, 237, 0.08);
   --accent-tint-border: rgba(124, 58, 237, 0.22);
   --ai-gradient: linear-gradient(135deg, #8b5cf6 0%, #6366f1 45%, #06b6d4 100%);
@@ -33,18 +33,18 @@
   --ai-glow: 0 8px 28px -10px rgba(124, 58, 237, 0.55);
 
   --do-bg: rgba(244, 63, 94, 0.1);
-  --do-text: #e11d48;
+  --do-text: #be123c;
   --schedule-bg: rgba(59, 130, 246, 0.1);
-  --schedule-text: #2563eb;
+  --schedule-text: #1d4ed8;
   --delegate-bg: rgba(139, 92, 246, 0.12);
-  --delegate-text: #7c3aed;
+  --delegate-text: #6d28d9;
   --later-bg: rgba(100, 116, 139, 0.1);
-  --later-text: #64748b;
+  --later-text: #475569;
 
   --badge-warn-bg: rgba(245, 158, 11, 0.14);
-  --badge-warn-text: #b45309;
+  --badge-warn-text: #92400e;
   --badge-urgent-bg: rgba(244, 63, 94, 0.1);
-  --badge-urgent-text: #e11d48;
+  --badge-urgent-text: #be123c;
   --critical-bg: linear-gradient(135deg, #f43f5e, #e11d48);
   --success: #059669;
 
@@ -76,28 +76,28 @@
 
     --text: #ececf1;
     --text-muted: #a1a1b5;
-    --text-faint: #6b6b80;
+    --text-faint: #9a9ab0; /* ≥ 4.5:1 on dark cards */
 
-    --accent: #a78bfa;
-    --accent-strong: #c4b5fd;
+    --accent: #c4b5fd;
+    --accent-strong: #ddd6fe;
     --accent-tint: rgba(167, 139, 250, 0.12);
     --accent-tint-border: rgba(167, 139, 250, 0.3);
     --ai-gradient-soft: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(6, 182, 212, 0.14));
     --ai-glow: 0 8px 30px -8px rgba(139, 92, 246, 0.6);
 
     --do-bg: rgba(251, 113, 133, 0.14);
-    --do-text: #fb7185;
+    --do-text: #fda4af;
     --schedule-bg: rgba(96, 165, 250, 0.14);
-    --schedule-text: #60a5fa;
+    --schedule-text: #93c5fd;
     --delegate-bg: rgba(167, 139, 250, 0.16);
-    --delegate-text: #a78bfa;
+    --delegate-text: #c4b5fd;
     --later-bg: rgba(148, 163, 184, 0.12);
-    --later-text: #94a3b8;
+    --later-text: #cbd5e1;
 
     --badge-warn-bg: rgba(251, 191, 36, 0.14);
-    --badge-warn-text: #fbbf24;
+    --badge-warn-text: #fcd34d;
     --badge-urgent-bg: rgba(251, 113, 133, 0.14);
-    --badge-urgent-text: #fb7185;
+    --badge-urgent-text: #fda4af;
     --success: #34d399;
 
     --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 32px -16px rgba(0, 0, 0, 0.6);

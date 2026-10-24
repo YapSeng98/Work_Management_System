@@ -23,6 +23,7 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build    # type-check + production build
 npm run lint
+npm test         # regression tests (made-up sample briefs in src/lib/brief/fixtures)
 ```
 
 Pushing to `main` deploys to GitHub Pages via `.github/workflows/deploy.yml`.

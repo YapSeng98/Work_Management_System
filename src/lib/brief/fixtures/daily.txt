@@ -1,0 +1,38 @@
+Daily Work Brief – 23 Oct 2026
+
+🔴 Needs Reply
+
+[High] Priya Nair — RE: INC0011111 Payroll export failing
+
+Customer needs root cause before month end.
+Action: Provide RCA.
+Timeline: Expected ASAP.
+
+[Medium] Omar Haddad — RE: SR2222222 release checklist
+
+Asked for the post-deploy checklist.
+Action: Send checklist.
+Timeline: Pending.
+🟠 Action Required
+
+[High] RE: INC0044444 - Invoice resubmission failing
+
+Fix deployed to UAT, waiting for verification/sign-off.
+Action: Follow up on UAT verification.
+Timeline: Before production deployment.
+🔵 Meeting & Schedule
+
+Today 2:00 PM
+
+Weekly ERP sync.
+⚪ FYI
+
+RE: [INC0055555] Data correction
+
+Batch completed and verified by customer.
+Today's Top 5 Priorities
+Rank	Priority	Reason1	INC0011111 RCA	Blocking month end.
+Support Summary
+Waiting for Customer
+INC0044444 UAT verification.
+Executive Summary: Payroll RCA first, then chase the invoice UAT sign-off.

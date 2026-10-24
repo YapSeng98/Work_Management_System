@@ -1,0 +1,16 @@
+Some report text first.
+
+```json
+{
+  "brief_date": "2026-10-26",
+  "bottom_line": "Answer the payroll question first.",
+  "counts": { "need_my_reply": 1, "uat_pending": 1 },
+  "items": [
+    { "title": "Answer payroll export question", "subject": "RE: Payroll export", "tickets": ["INC0011111"], "customer": "Acme Health", "from": "Priya Nair", "owner": "Jane Tan", "waiting_on": "me", "type": "reply", "stage": "rca", "status": "Customer escalated", "next_action": "Send RCA", "recommended_reply": "Root cause found; fix tomorrow.", "can_close": false, "due": "2026-10-26", "waiting_since": "2026-10-23", "urgency": "critical", "risk": "high", "escalation": true, "top_rank": 1 },
+    { "title": "Finalise warehouse quote", "subject": "Warehouse onboarding", "tickets": [], "owner": "Alex Lim", "waiting_on": "my_team", "type": "action", "urgency": "medium", "risk": "medium", "escalation": false, "top_rank": 4 },
+    { "title": "Get UAT sign-off", "subject": "INC0044444", "tickets": "INC0044444", "waiting_on": "customer", "type": "follow_up", "urgency": "medium", "due": null, "top_rank": "3" },
+    { "title": "Data correction done", "waiting_on": "none", "type": "fyi", "urgency": "low" }
+  ],
+  "meetings": [ { "when": "2026-10-27 14:30", "title": "ERP review" } ]
+}
+```

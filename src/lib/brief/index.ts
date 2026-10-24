@@ -15,9 +15,31 @@ export type { BriefItem, BriefMeeting, ItemKind, Owner, ParsedBrief, Priority } 
 export function parseBrief(text: string): ParsedBrief {
   const json = extractBriefJson(text);
   if (json) return parseJsonBrief(json);
-  if (looksLikeOwnershipBrief(text)) return parseOwnershipBrief(text);
-  if (looksLikeExecutiveBrief(text)) return parseExecutiveBrief(text);
-  return parseDailyBrief(text);
+  const clean = normalize(text);
+  if (looksLikeOwnershipBrief(clean)) return parseOwnershipBrief(clean);
+  if (looksLikeExecutiveBrief(clean)) return parseExecutiveBrief(clean);
+  return parseDailyBrief(clean);
+}
+
+/**
+ * Strip the markdown AI tools add when a report is copied (## headings, > quotes,
+ * "- " / "• " bullets, **bold**), so "- **Owner:** Jane" reads as "Owner: Jane".
+ * Table rows ("| a | b |") are left alone — the table reader handles them.
+ */
+export function normalize(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .map((raw) => {
+      const line = raw.trim();
+      if (line.startsWith("|")) return line;
+      return line
+        .replace(/^#{1,6} +/, "") // a space, not a tab: "#\tTask" is a table header
+        .replace(/^>\s*/, "")
+        .replace(/^[-*•·▪◦]\s+/, "")
+        .replace(/\*\*|__/g, "")
+        .trim();
+    })
+    .join("\n");
 }
 
 /**
