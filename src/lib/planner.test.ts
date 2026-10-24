@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NOTES_MARKER, parseNotes, plannerDue, plannerNotes, plannerPriority, shadowEmail, taskIdFor, taskPush } from "./planner";
+import { NOTES_MARKER, parseNotes, plannerDue, plannerNotes, plannerNotesBody, plannerPriority, shadowEmail, taskIdFor, taskPush } from "./planner";
 import { parseBrief } from "./brief";
 import ownership from "./brief/fixtures/ownership.txt?raw";
 
@@ -11,6 +11,14 @@ describe("Planner bridge", () => {
     expect(NOTES_MARKER).toBe("— Daily Brief ·");
     const notes = plannerNotes(item, "Brief 26 Oct");
     expect(notes.split("\n").at(-1)).toBe("— Daily Brief · Do · Brief 26 Oct");
+  });
+
+  it("always re-adds the footer to edited notes, exactly once", () => {
+    const edited = plannerNotes(item, "B", "My own wording.\n— Daily Brief · Later · typed by hand");
+    expect(edited).toBe("My own wording.\n— Daily Brief · Do · B");
+    expect(plannerNotes(item, "B", "   ")).toBe("— Daily Brief · Do · B");
+    expect(plannerNotesBody(item)).toContain("Suggested reply: Share the root cause");
+    expect(plannerNotesBody(item)).not.toContain(NOTES_MARKER);
   });
 
   it("reads back what it writes", () => {

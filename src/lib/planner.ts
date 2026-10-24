@@ -55,8 +55,8 @@ export async function taskIdFor(userId: string, itemKey: string): Promise<string
 /** Last line of every task's notes — how My Tasks finds tasks that came from a brief. */
 export const NOTES_MARKER = "— Daily Brief ·";
 
-/** Task notes: everything useful from the brief, so the Planner task stands on its own. */
-export function plannerNotes(item: BriefItem, briefTitle?: string): string {
+/** The editable part of a task's notes: everything useful from the brief. */
+export function plannerNotesBody(item: BriefItem): string {
   return [
     item.action && `Next: ${item.action}`,
     item.status && `Status: ${item.status}`,
@@ -65,10 +65,32 @@ export function plannerNotes(item: BriefItem, briefTitle?: string): string {
     item.suggestedReply && `Suggested reply: ${item.suggestedReply}`,
     item.ownerName && `Owner: ${item.ownerName}`,
     [item.from && `From: ${item.from}`, item.customer && `Customer: ${item.customer}`].filter(Boolean).join(" · ") || undefined,
-    `${NOTES_MARKER} ${quadrantLabel[item.quadrant]}${briefTitle ? ` · ${briefTitle}` : ""}`,
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+/** The fixed last line — how My Tasks (and the Planner's "Brief" badge) find these tasks. */
+export function notesFooter(item: BriefItem, briefTitle?: string): string {
+  return `${NOTES_MARKER} ${quadrantLabel[item.quadrant]}${briefTitle ? ` · ${briefTitle}` : ""}`;
+}
+
+/** Full task notes: the (possibly edited) body, then the footer — always re-added. */
+export function plannerNotes(item: BriefItem, briefTitle?: string, body = plannerNotesBody(item)): string {
+  const clean = body
+    .split("\n")
+    .filter((l) => !l.startsWith(NOTES_MARKER))
+    .join("\n")
+    .trim();
+  return [clean, notesFooter(item, briefTitle)].filter(Boolean).join("\n");
+}
+
+/** What the user changed in "Edit & take" before the task is created. */
+export interface TakeEdit {
+  title: string;
+  body: string;
+  due: string; // ISO date, or "" for none
+  priority: Priority;
 }
 
 /** Reads back what plannerNotes wrote (tolerant of edits made in the Planner). */

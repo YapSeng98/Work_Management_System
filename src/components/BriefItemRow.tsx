@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { quadrantLabel, quadrantStyle } from "../quadrant";
-import type { BriefItem } from "../lib/brief";
-import { ArrowRightIcon, CheckIcon, CopyIcon, SparklesIcon, XIcon } from "./icons";
+import type { BriefItem, Priority } from "../lib/brief";
+import { notesFooter, plannerDue, plannerNotesBody, type TakeEdit } from "../lib/planner";
+import { ArrowRightIcon, CheckIcon, CopyIcon, PencilIcon, SparklesIcon, XIcon } from "./icons";
 import { Pill } from "./Pill";
 
 /** new = not taken; taken = an open task covers it; done = taken before and completed. */
@@ -28,6 +29,7 @@ export function BriefItemRow({
   item,
   status,
   since,
+  briefTitle,
   onTake,
   onDismiss,
 }: {
@@ -35,11 +37,13 @@ export function BriefItemRow({
   isLast?: boolean;
   status: ItemStatus;
   since?: string;
-  onTake?: () => void;
+  briefTitle?: string;
+  onTake?: (edit?: TakeEdit) => void;
   onDismiss?: () => void;
 }) {
   const q = quadrantStyle[item.quadrant];
   const taken = status === "taken";
+  const [editing, setEditing] = useState(false);
 
   return (
     <div className="item" style={taken ? { background: "var(--divider)" } : undefined}>
@@ -91,10 +95,22 @@ export function BriefItemRow({
           </div>
         )}
         {item.timeline && <div style={{ fontSize: 12, color: "var(--text-faint)" }}>⏱ {item.timeline}</div>}
-        {item.suggestedReply && <SuggestedReply text={item.suggestedReply} />}
+        {item.suggestedReply && !editing && <SuggestedReply text={item.suggestedReply} />}
       </div>
 
-      {onTake && (
+      {onTake && editing && (
+        <TakeEditor
+          item={item}
+          briefTitle={briefTitle}
+          onCancel={() => setEditing(false)}
+          onSubmit={(edit) => {
+            setEditing(false);
+            onTake(edit);
+          }}
+        />
+      )}
+
+      {onTake && !editing && (
         <div style={{ display: "flex", gap: 6, flex: "none", alignItems: "center" }}>
           {taken ? (
             <button className="btn btn-done" disabled title="Already a task in your Planner">
@@ -102,10 +118,17 @@ export function BriefItemRow({
               In My Tasks
             </button>
           ) : (
-            <button className={status === "done" ? "btn" : "btn btn-primary"} onClick={onTake} title="Create this as a task in your Planner">
-              {status === "done" ? "Take again" : "Take"}
-              <ArrowRightIcon size={13} />
-            </button>
+            <>
+              <button className={status === "done" ? "btn" : "btn btn-primary"} onClick={() => onTake()} title="Create this as a task in your Planner">
+                {status === "done" ? "Take again" : "Take"}
+                <ArrowRightIcon size={13} />
+              </button>
+              {status === "new" && (
+                <button className="btn btn-icon" onClick={() => setEditing(true)} title="Edit & take" aria-label="Edit, then take">
+                  <PencilIcon size={14} />
+                </button>
+              )}
+            </>
           )}
           {!taken && onDismiss && (
             <button className="btn btn-icon" onClick={onDismiss} title="Dismiss" aria-label="Dismiss">
@@ -141,5 +164,78 @@ function SuggestedReply({ text }: { text: string }) {
         {copied ? "Copied" : "Copy"}
       </button>
     </div>
+  );
+}
+
+const PRIORITIES: Priority[] = ["critical", "high", "medium", "low"];
+
+/** "Edit & take": adjust what goes into the Planner task before it's created. */
+function TakeEditor({
+  item,
+  briefTitle,
+  onSubmit,
+  onCancel,
+}: {
+  item: BriefItem;
+  briefTitle?: string;
+  onSubmit: (edit: TakeEdit) => void;
+  onCancel: () => void;
+}) {
+  const [title, setTitle] = useState(item.title);
+  const [due, setDue] = useState(plannerDue(item) ?? "");
+  const [priority, setPriority] = useState<Priority>(item.priority);
+  const [body, setBody] = useState(plannerNotesBody(item));
+  const label = { fontSize: 12, fontWeight: 600, color: "var(--text-muted)" } as const;
+
+  return (
+    <form
+      className="reply"
+      style={{ flex: "1 1 100%", flexDirection: "column", alignItems: "stretch", gap: 12, padding: 14 }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit({ title, body, due, priority });
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 600, color: "var(--accent)" }}>
+        <SparklesIcon size={15} />
+        Edit before adding to your Planner
+      </div>
+      <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        <span style={label}>Title</span>
+        <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus />
+      </label>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+        <label style={{ display: "flex", flexDirection: "column", gap: 5, flex: "1 1 160px" }}>
+          <span style={label}>Due date</span>
+          <input className="input" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 5, flex: "1 1 160px" }}>
+          <span style={label}>Priority</span>
+          <select className="input" value={priority} onChange={(e) => setPriority(e.target.value as Priority)}>
+            {PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {cap(p)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        <span style={label}>Notes for the Planner task — edit the AI's text freely</span>
+        <textarea className="input" value={body} onChange={(e) => setBody(e.target.value)} rows={Math.min(10, Math.max(4, body.split("\n").length + 1))} style={{ resize: "vertical", lineHeight: 1.5 }} />
+        <span style={{ fontSize: 11.5, color: "var(--text-faint)" }}>
+          Added automatically as the last line: <code>{notesFooter(item, briefTitle)}</code>
+        </span>
+      </label>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <button type="button" className="btn" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="submit" className="btn btn-primary">
+          Add to Planner
+          <ArrowRightIcon size={13} />
+        </button>
+      </div>
+    </form>
   );
 }

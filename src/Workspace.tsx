@@ -11,7 +11,7 @@ import { XIcon } from "./components/icons";
 
 import { parseBrief, type BriefItem, type ParsedBrief } from "./lib/brief";
 import * as db from "./lib/db";
-import { taskIdFor } from "./lib/planner";
+import { taskIdFor, type TakeEdit } from "./lib/planner";
 import type { HistoryAction, HistoryEntry, MyTask, Quadrant, Tab } from "./types";
 
 /** Parse pasted brief text; null if it contains nothing recognisable. */
@@ -177,7 +177,7 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
     });
   }
 
-  function handleTake(item: BriefItem) {
+  function handleTake(item: BriefItem, edit?: TakeEdit) {
     if (openTaskFor(item) || inFlight.current.has(item.id)) return;
     inFlight.current.add(item.id);
     const doneBefore = tasks.find((t) => t.id === taskIds.get(item.id) && t.done);
@@ -187,10 +187,10 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
         const rev = await db.setTaskDone(doneBefore, false);
         setTasks((prev) => prev.map((t) => (t.id === doneBefore.id ? { ...t, done: false, rev } : t)));
       } else {
-        const task = await db.insertTask(item, userId, current?.title);
+        const task = await db.insertTask(item, userId, current?.title, edit);
         setTasks((prev) => [task, ...prev.filter((t) => t.id !== task.id)]);
       }
-      await log("taken", item.title, item.quadrant);
+      await log("taken", edit?.title.trim() || item.title, item.quadrant);
     }).finally(() => inFlight.current.delete(item.id));
   }
 

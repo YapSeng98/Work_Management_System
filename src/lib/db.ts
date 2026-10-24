@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 import { isoDate, localTime } from "./dates";
 import { clearLocal, readLocal, writeLocal } from "./storage";
-import { NOTES_MARKER, parseNotes, plannerDue, plannerNotes, plannerPriority, taskIdFor, taskPush, type PushItem } from "./planner";
+import { NOTES_MARKER, parseNotes, plannerDue, plannerNotes, plannerPriority, taskIdFor, taskPush, type PushItem, type TakeEdit } from "./planner";
 import type { BriefItem } from "./brief";
 import type { HistoryAction, HistoryEntry, MyTask, Quadrant } from "../types";
 
@@ -208,21 +208,25 @@ export async function fetchTasks(): Promise<MyTask[]> {
   return rows.map(toTask);
 }
 
-/** Create the task in the Planner. Its id comes from the account + brief item. */
-export async function insertTask(item: BriefItem, userId: string, briefTitle?: string): Promise<MyTask> {
+/**
+ * Create the task in the Planner. Its id comes from the account + brief item.
+ * `edit` carries what the user changed in "Edit & take"; without it the brief's values are used.
+ */
+export async function insertTask(item: BriefItem, userId: string, briefTitle?: string, edit?: TakeEdit): Promise<MyTask> {
   const id = await taskIdFor(userId, item.id);
-  const due = plannerDue(item);
-  const priority = plannerPriority(item.priority);
-  const notes = plannerNotes(item, briefTitle);
+  const title = edit?.title.trim() || item.title;
+  const due = edit ? edit.due || undefined : plannerDue(item);
+  const priority = plannerPriority(edit?.priority ?? item.priority);
+  const notes = plannerNotes(item, briefTitle, edit?.body);
   const result = await syncPush([
     taskPush(
       id,
       // deleted: false brings back a task that was taken before and then deleted
-      { title: item.title, notes, state: "open", priority, ...(due ? { due } : {}), deleted: false },
+      { title, notes, state: "open", priority, ...(due ? { due } : {}), deleted: false },
       null,
     ),
   ]);
-  return toTask({ id, title: item.title, notes, state: "open", priority, due: due ?? null, rev: result.rev ?? null, updated_at: new Date().toISOString() });
+  return toTask({ id, title, notes, state: "open", priority, due: due ?? null, rev: result.rev ?? null, updated_at: new Date().toISOString() });
 }
 
 export async function setTaskDone(task: MyTask, done: boolean): Promise<number | null> {

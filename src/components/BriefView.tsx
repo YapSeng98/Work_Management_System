@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { BriefItem, ParsedBrief } from "../lib/brief";
+import type { TakeEdit } from "../lib/planner";
 import { Card, SectionHeader } from "./Card";
 import { BriefItemRow, type ItemStatus } from "./BriefItemRow";
 import { MeetingsCard } from "./MeetingsCard";
@@ -18,10 +19,10 @@ export function BriefView({
   hidden: (id: string) => boolean;
   statusOf: (item: BriefItem) => ItemStatus;
   sinceOf: (item: BriefItem) => string | undefined;
-  onTake: (item: BriefItem) => void;
+  onTake: (item: BriefItem, edit?: TakeEdit) => void;
   onDismiss: (item: BriefItem) => void;
 }) {
-  const shared = { statusOf, sinceOf, onTake, onDismiss };
+  const shared = { statusOf, sinceOf, onTake, onDismiss, briefTitle: brief.title };
   const visible = brief.items.filter((i) => !hidden(i.id));
   const mine = visible.filter((i) => i.owner === "me");
   const team = visible.filter((i) => i.owner === "team");
@@ -88,7 +89,7 @@ export function BriefView({
         <MeetingsCard meetings={brief.meetings.map((m) => ({ id: m.id, time: m.when, title: m.title }))} />
       )}
       {fyi.length > 0 && (
-        <ItemList icon={<FlagIcon size={15} />} label="FYI" hint="No action needed" items={fyi} empty="" statusOf={statusOf} sinceOf={sinceOf} />
+        <ItemList icon={<FlagIcon size={15} />} label="FYI" hint="No action needed" items={fyi} empty="" statusOf={statusOf} sinceOf={sinceOf} briefTitle={brief.title} />
       )}
     </>
   );
@@ -102,6 +103,7 @@ function ItemList({
   empty,
   statusOf,
   sinceOf,
+  briefTitle,
   onTake,
   onDismiss,
 }: {
@@ -112,7 +114,8 @@ function ItemList({
   empty: string;
   statusOf: (item: BriefItem) => ItemStatus;
   sinceOf: (item: BriefItem) => string | undefined;
-  onTake?: (item: BriefItem) => void;
+  briefTitle?: string;
+  onTake?: (item: BriefItem, edit?: TakeEdit) => void;
   onDismiss?: (item: BriefItem) => void;
 }) {
   return (
@@ -125,7 +128,8 @@ function ItemList({
             item={item}
             status={statusOf(item)}
             since={sinceOf(item)}
-            onTake={onTake && (() => onTake(item))}
+            briefTitle={briefTitle}
+            onTake={onTake && ((edit) => onTake(item, edit))}
             onDismiss={onDismiss && (() => onDismiss(item))}
           />
         ))}
