@@ -22,6 +22,14 @@ export function readLocal<T>(key: string, fallback: T): T {
   }
 }
 
+export function clearLocal() {
+  try {
+    for (const key of Object.keys(localStorage)) if (key.startsWith("dbrief-local:")) localStorage.removeItem(key);
+  } catch {
+    // Storage blocked — nothing to clear.
+  }
+}
+
 export function writeLocal(key: string, value: unknown) {
   try {
     localStorage.setItem(`dbrief-local:${key}`, JSON.stringify(value));

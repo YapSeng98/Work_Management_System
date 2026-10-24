@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 import { isoDate, localTime } from "./dates";
-import { readLocal, writeLocal } from "./storage";
+import { clearLocal, readLocal, writeLocal } from "./storage";
 import { NOTES_MARKER, parseNotes, plannerDue, plannerNotes, plannerPriority, taskIdFor, taskPush, type PushItem } from "./planner";
 import type { BriefItem } from "./brief";
 import type { HistoryAction, HistoryEntry, MyTask, Quadrant } from "../types";
@@ -112,6 +112,12 @@ const toHistory = (r: HistoryRow): HistoryEntry => {
   return { id: r.id, action: r.action, title: r.title, quadrant: r.quadrant ?? undefined, date: isoDate(at), time: localTime(at) };
 };
 
+async function syncPushAll(items: PushItem[]) {
+  const data = check(await db().rpc("sync_push", { items })) as { results: { client_uuid: string; outcome: string }[] };
+  const failed = items.filter((i) => data.results.find((r) => r.client_uuid === i.client_uuid)?.outcome !== "applied");
+  if (failed.length) throw new Error(`Planner didn't accept ${failed.length} of ${items.length} changes`);
+}
+
 async function syncPush(items: PushItem[]) {
   const data = check(await db().rpc("sync_push", { items })) as {
     results: { client_uuid: string; outcome: string; rev?: number }[];
@@ -132,8 +138,26 @@ export async function fetchBriefs(limit = 60): Promise<StoredBrief[]> {
   return rows.map(toBrief);
 }
 
+/** How long stored data is kept; older rows are removed whenever a new brief is saved. */
+const KEEP_DAYS = { briefs: 60, dismissed: 90, history: 180 };
+
+function daysAgo(n: number) {
+  return new Date(Date.now() - n * 86_400_000).toISOString();
+}
+
+/** Drop data past its keep period so the tables don't grow forever. */
+async function pruneOld() {
+  await Promise.all([
+    db().from("brief_reports").delete().lt("created_at", daysAgo(KEEP_DAYS.briefs)),
+    db().from("brief_dismissed").delete().lt("created_at", daysAgo(KEEP_DAYS.dismissed)),
+    db().from("brief_history").delete().lt("created_at", daysAgo(KEEP_DAYS.history)),
+  ]);
+}
+
 export async function insertBrief(rawText: string, title: string, briefDate?: Date): Promise<StoredBrief> {
   if (mode === "local") {
+    const existing = readLocal<StoredBrief[]>("briefs", []);
+    if (existing[0]?.rawText === rawText) return existing[0]; // same paste again — keep one copy
     const now = new Date();
     const brief: StoredBrief = {
       id: crypto.randomUUID(),
@@ -142,9 +166,13 @@ export async function insertBrief(rawText: string, title: string, briefDate?: Da
       rawText,
       createdAt: now.toISOString(),
     };
-    writeLocal("briefs", [brief, ...readLocal<StoredBrief[]>("briefs", [])].slice(0, 60));
+    writeLocal("briefs", [brief, ...existing].slice(0, 60));
     return brief;
   }
+  const latest = check(
+    await db().from("brief_reports").select("*").order("created_at", { ascending: false }).limit(1),
+  ) as BriefRow[];
+  if (latest[0]?.raw_text === rawText) return toBrief(latest[0]); // same paste again — keep one copy
   const row = check(
     await db()
       .from("brief_reports")
@@ -152,6 +180,7 @@ export async function insertBrief(rawText: string, title: string, briefDate?: Da
       .select("*")
       .single(),
   ) as BriefRow;
+  void pruneOld(); // housekeeping; a failure here doesn't affect the paste
   return toBrief(row);
 }
 
@@ -204,6 +233,23 @@ export async function setTaskDone(task: MyTask, done: boolean): Promise<number |
 /** Deletes the task in the Planner too (soft delete, like the Planner's own delete). */
 export async function deleteTask(task: MyTask) {
   await syncPush([taskPush(task.id, { deleted: true }, task.rev)]);
+}
+
+/** Delete every listed task in the Planner (soft delete), in one request. */
+export async function deleteTasks(tasks: MyTask[]) {
+  if (tasks.length) await syncPushAll(tasks.map((t) => taskPush(t.id, { deleted: true }, t.rev)));
+}
+
+/** Remove all of this account's pasted briefs, dismissed items and history (Planner untouched). */
+export async function clearBriefData() {
+  clearLocal();
+  if (mode === "local") return;
+  const none = "00000000-0000-0000-0000-000000000000";
+  // RLS limits each delete to the signed-in user's rows; the filters only satisfy
+  // PostgREST's rule that a delete must have one.
+  check(await db().from("brief_reports").delete().neq("id", none));
+  check(await db().from("brief_dismissed").delete().neq("item_key", ""));
+  check(await db().from("brief_history").delete().neq("id", none));
 }
 
 // --- Dismissed items --------------------------------------------------------

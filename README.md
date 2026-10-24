@@ -27,6 +27,13 @@ npm run lint
 
 Pushing to `main` deploys to GitHub Pages via `.github/workflows/deploy.yml`.
 
+### Data kept
+
+Whenever a new brief is saved, briefs older than 60 days, dismissed items older than
+90 days and history older than 180 days are deleted, and pasting the same brief twice
+keeps one copy. **History → Clear all data** wipes briefs, dismissed items and history
+(and, if you confirm, the tasks Daily Brief created in the Planner).
+
 ### How it talks to the Planner
 
 - Tasks are written **only through the Planner's `sync_push()` RPC** — the path its own

@@ -53,11 +53,13 @@ export function HistoryView({
   briefs,
   openTasks,
   onViewBrief,
+  onClearAll,
 }: {
   entries: HistoryEntry[];
   briefs: BriefSummary[];
   openTasks: number;
   onViewBrief: (id: string) => void;
+  onClearAll: () => void;
 }) {
   const grouped = new Map<string, HistoryEntry[]>();
   for (const entry of entries) {
@@ -165,6 +167,18 @@ export function HistoryView({
         {dates.length === 0 && (
           <div style={{ fontSize: 14, color: "var(--text-faint)" }}>Nothing logged yet — take or dismiss items on Today to start building history.</div>
         )}
+      </div>
+
+      <div className="card rise" style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 12, padding: "14px 18px" }}>
+        <div style={{ flex: "1 1 260px" }}>
+          <div style={{ fontSize: 13.5, fontWeight: 600 }}>Start fresh</div>
+          <div style={{ fontSize: 12.5, color: "var(--text-muted)" }}>
+            Delete all pasted briefs, dismissed items and history. You'll be asked separately about tasks in your Planner.
+          </div>
+        </div>
+        <button className="btn" onClick={onClearAll} style={{ color: "var(--do-text)", borderColor: "var(--badge-urgent-bg)" }}>
+          Clear all data
+        </button>
       </div>
     </div>
   );

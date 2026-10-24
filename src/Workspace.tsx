@@ -210,6 +210,26 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
     });
   }
 
+  function handleClearAll() {
+    if (!window.confirm("Delete ALL pasted briefs, dismissed items and history? This can't be undone.")) return;
+    const fromBrief = tasks;
+    const alsoTasks =
+      fromBrief.length > 0 &&
+      window.confirm(
+        `Also delete the ${fromBrief.length} task${fromBrief.length === 1 ? "" : "s"} Daily Brief created in your Planner?\n\nOK = delete them too · Cancel = keep them in your Planner`,
+      );
+    void run(async () => {
+      await db.clearBriefData();
+      if (alsoTasks) await db.deleteTasks(fromBrief);
+      setBriefs([]);
+      setDismissed(new Set());
+      setHistory([]);
+      setViewingId(null);
+      if (alsoTasks) setTasks([]);
+      setTab("today");
+    });
+  }
+
   function handleRemoveTask(task: MyTask) {
     if (!window.confirm(`Delete "${task.title}" from your Planner too?`)) return;
     void run(async () => {
@@ -269,6 +289,7 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
               setViewingId(id);
               setTab("today");
             }}
+            onClearAll={handleClearAll}
           />
         ) : tab === "tasks" ? (
           <MyTasksView tasks={tasks} onToggleDone={handleToggleDone} onRemove={handleRemoveTask} />
