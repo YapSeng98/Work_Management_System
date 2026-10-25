@@ -208,11 +208,14 @@ export interface Acc {
   ownerName?: string;
   suggestedReply?: string;
   canClose?: boolean;
+  engagement?: boolean;
+  completed?: boolean;
 }
 
 export interface Mention {
   text: string; // used for ticket refs and keyword matching
   passing?: boolean; // a reference to an item (Top 10 row, risk line) rather than an item itself
+  strict?: boolean; // only merge by ticket number or 3+ shared words (side lists: engagements, emails, completed)
   matchText?: string; // extra words for matching (e.g. an escalation's description)
   title?: string;
   titleWeight?: number;
@@ -235,12 +238,14 @@ export interface Mention {
   ownerName?: string;
   suggestedReply?: string;
   canClose?: boolean;
+  engagement?: boolean;
+  completed?: boolean;
 }
 
 export class Merger {
   items: Acc[] = [];
 
-  find(refs: string[], words: Set<string>, acronyms: Set<string>, passing: boolean): Acc | undefined {
+  find(refs: string[], words: Set<string>, acronyms: Set<string>, passing: boolean, strict = false): Acc | undefined {
     if (refs.length) {
       const byRef = this.items.find((a) => refs.some((r) => a.refs.has(r)));
       if (byRef) return byRef;
@@ -256,8 +261,8 @@ export class Merger {
       const coverage = score / Math.max(1, Math.min(words.size, a.words.size));
       // 4+ shared words always count; a passing mention (Top 10 row, aging line) needs 3;
       // otherwise the shared words must cover most of the shorter description.
-      const strong = score >= 4 || (passing && score >= 3);
-      if (score >= 2 && !strong && coverage < 0.6) continue;
+      const strong = score >= 4 || ((passing || strict) && score >= 3);
+      if (score >= 2 && !strong && (strict || coverage < 0.6)) continue;
       if (score > bestScore) {
         best = a;
         bestScore = score;
@@ -280,7 +285,7 @@ export class Merger {
     const refs = refsIn(m.text);
     const matchText = `${m.title ?? m.text} ${m.matchText ?? ""}`;
     const words = keywords(matchText);
-    let acc = this.find(refs, words, acronymsIn(m.title ?? m.text), !!m.passing);
+    let acc = this.find(refs, words, acronymsIn(m.title ?? m.text), !!m.passing, !!m.strict);
     if (!acc) {
       acc = { refs: new Set(), words: new Set(), titleWeight: -1, from: [], escalation: false, personal: false, summary: [], dueText: [], owners: [], reasons: [] };
       this.items.push(acc);
@@ -310,6 +315,8 @@ export class Merger {
     acc.ownerName ??= m.ownerName;
     acc.suggestedReply ??= m.suggestedReply;
     acc.canClose ??= m.canClose;
+    acc.engagement ||= m.engagement;
+    acc.completed ||= m.completed;
     return acc;
   }
 }

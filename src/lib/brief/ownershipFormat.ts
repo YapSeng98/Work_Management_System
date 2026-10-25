@@ -1,4 +1,4 @@
-import { dueFromText, hashId, maxPriority, priorityRank, rankItem, sortItems, toPriority } from "./common";
+import { dueFromText, hashId, maxPriority, priorityRank, rankItem, refsIn, sortItems, toPriority } from "./common";
 import { Merger, TableReader, type Acc, type Mention } from "./execFormat";
 import type { BriefCount, BriefItem, ItemKind, Owner, ParsedBrief, Priority } from "./types";
 
@@ -18,7 +18,19 @@ export function looksLikeOwnershipBrief(text: string) {
   return /\bmy actions\b/i.test(text) && /(section b\b|team actions|waiting on customer)/i.test(text);
 }
 
-type Section = "summary" | "mine" | "team" | "customer" | "escalations" | "aging" | "top" | "ignore";
+type Section =
+  | "summary"
+  | "changes"
+  | "mine"
+  | "team"
+  | "customer"
+  | "notes"
+  | "engagements"
+  | "completed"
+  | "escalations"
+  | "aging"
+  | "top"
+  | "ignore";
 
 function sectionOf(line: string): Section | null {
   const t = line.replace(/^[^A-Za-z0-9]+/, "").trim().toLowerCase();
@@ -28,16 +40,24 @@ function sectionOf(line: string): Section | null {
     // (so a sentence such as "Waiting on customer feedback." is never taken for one).
     if (/[:\t|]/.test(line) || line.endsWith(".")) return null; // fields, table rows, sentences
     if (/^executive summary\b/.test(t)) return "summary";
+    if (/^what changed\b/.test(t)) return "changes";
+    if (/^completed\b|no longer my action/.test(t)) return "completed";
+    if (/^(important )?new emails\b/.test(t)) return "notes";
+    if (/^decision support\b|engagements?$/.test(t)) return "engagements";
     if (/^(section a\b|my actions\b)/.test(t)) return "mine";
     if (/^(section b\b|(\w+ )?team actions\b)/.test(t)) return "team";
     if (/^(section c\b|waiting on customer\b)/.test(t)) return "customer";
     if (/^escalations\b/.test(t)) return "escalations";
     if (/^(aging items|risks)\b/.test(t)) return "aging";
-    if (/^((\w+ ){0,3}priorities\b|top \d+ priorities)/.test(t)) return "top";
+    if (/^(([\w/]+ ){0,3}priorities\b|top \d+ priorities)/.test(t)) return "top";
     if (/^(executive )?recommendation|^executive work brief/.test(t)) return "ignore";
     return null;
   }
   if (/^executive summary/.test(t)) return "summary";
+  if (/what changed/.test(t)) return "changes";
+  if (/^completed\b|no longer my action/.test(t)) return "completed";
+  if (/new emails|emails to note/.test(t)) return "notes";
+  if (/decision support|engagements?\b/.test(t)) return "engagements";
   if (/section a\b|my actions/.test(t)) return "mine";
   if (/section b\b|team actions/.test(t)) return "team";
   if (/section c\b|waiting on customer/.test(t)) return "customer";
@@ -89,6 +109,7 @@ export function parseOwnershipBrief(text: string): ParsedBrief {
   const table = new TableReader();
   const counts: BriefCount[] = [];
   let executiveSummary: string | undefined;
+  const changes: string[] = [];
   let section: Section | null = null;
   let level: Priority | undefined;
   let entry: (Mention & { fields: number }) | null = null;
@@ -108,6 +129,12 @@ export function parseOwnershipBrief(text: string): ParsedBrief {
       entry = { ...base, titleWeight: 2, owner: "team", kind: "action", priority: level ?? "medium", reason: "Owned by your team" };
     else if (section === "customer")
       entry = { ...base, titleWeight: 1, owner: "others", kind: "follow_up", priority: level ?? "low", reason: "Waiting on customer" };
+    else if (section === "notes")
+      entry = { ...base, titleWeight: 1, strict: true, owner: "fyi", kind: "fyi", priority: "low", reason: "New email worth noting" };
+    else if (section === "engagements")
+      entry = { ...base, titleWeight: 1.5, strict: true, owner: "team", kind: "action", priority: level ?? "medium", engagement: true, reason: "Customer engagement" };
+    else if (section === "completed")
+      entry = { ...base, titleWeight: 0.5, strict: true, kind: "fyi", priority: "low", completed: true, reason: "Completed — no longer your action" };
     else entry = { ...base, titleWeight: 1.5, escalation: true, kind: "action", priority: "high", reason: "Escalation" };
   };
 
@@ -129,16 +156,16 @@ export function parseOwnershipBrief(text: string): ParsedBrief {
       entry.matchText = `${entry.matchText ?? ""} ${v}`;
     } else if (name === "owner") {
       entry.ownerName = v.replace(/\s*\(.*\)\s*$/, "").replace(/\.$/, "");
-      if (section === "mine") return;
+      if (section === "mine" || section === "completed") return;
       if (isMe(v)) {
         entry.owner = "me";
         entry.reason = "You own the next action";
-      } else if (section !== "customer") {
+      } else if (section !== "customer" && section !== "notes") {
         entry.owner = "team";
         entry.reason = `Owned by ${entry.ownerName}`;
       }
     } else if (name === "current status" || name === "status") entry.status = v;
-    else if (name === "last action by") entry.from = v;
+    else if (name === "last action by" || name === "from" || name === "sender") entry.from = v;
     else if (name === "customer waiting?") {
       if (/^y/i.test(v)) entry.reason = section === "mine" ? "Customer is waiting for your reply" : entry.reason;
     } else if (name.includes("waiting since")) entry.waitingSince = v.replace(/\.$/, "");
@@ -200,9 +227,16 @@ export function parseOwnershipBrief(text: string): ParsedBrief {
         }
         break;
 
+      case "changes":
+        if (!/^(none|no changes?)\b/i.test(line)) changes.push(line.replace(/^\d+[.)]\s*/, ""));
+        break;
+
       case "mine":
       case "team":
       case "customer":
+      case "notes":
+      case "engagements":
+      case "completed":
       case "escalations": {
         const lvl = levelOf(line);
         if (lvl) {
@@ -269,8 +303,10 @@ export function parseOwnershipBrief(text: string): ParsedBrief {
     .filter((a) => a.title)
     .map((a) => {
       const vote = pick(a);
-      const owner: Owner = vote?.owner ?? "team";
-      const ownerReason = vote?.reason || a.reasons[0] || "Not assigned to you";
+      // Completed beats everything except Section A itself still listing it as mine.
+      const done = a.completed && !a.personal; // `personal` is set only by Section A ("My actions")
+      const owner: Owner = done ? "fyi" : (vote?.owner ?? "team");
+      const ownerReason = done ? "Completed — no longer your action" : vote?.reason || a.reasons[0] || "Not assigned to you";
       const priority = maxPriority(a.priority ?? "medium", a.risk && priorityRank[a.risk] >= 3 ? a.risk : undefined)!;
       const kind: ItemKind = owner === "me" ? (a.kind ?? "action") : owner === "others" ? "follow_up" : "action";
       const due = dueFromText(a.dueText.join(" "));
@@ -292,6 +328,8 @@ export function parseOwnershipBrief(text: string): ParsedBrief {
         ownerReason,
         ownerName: owner === "me" ? undefined : a.ownerName,
         waitingOnCustomer: owner !== "others" && a.owners.some((x) => x.owner === "others") ? true : undefined,
+        engagement: a.engagement || undefined,
+        completed: done || undefined,
         suggestedReply: a.suggestedReply,
         canClose: a.canClose || undefined,
         topRank: a.topRank,
@@ -305,5 +343,11 @@ export function parseOwnershipBrief(text: string): ParsedBrief {
       };
     });
 
-  return { format: "ownership", title, items: sortItems(items), meetings: [], counts, executiveSummary };
+  // "What changed today" lines flag the items they mention (by ticket number).
+  for (const line of changes) {
+    const refs = refsIn(line);
+    for (const item of items) if (item.refs.some((r) => refs.includes(r))) item.changedToday = true;
+  }
+
+  return { format: "ownership", title, items: sortItems(items), meetings: [], counts, executiveSummary, changes };
 }

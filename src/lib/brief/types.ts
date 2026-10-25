@@ -27,6 +27,9 @@ export interface BriefItem {
   suggestedReply?: string;
   canClose?: boolean;
   waitingOnCustomer?: boolean; // also listed as waiting on the customer
+  changedToday?: boolean; // named in "What changed today"
+  engagement?: boolean; // from a customer-engagement / decision-support section
+  completed?: boolean; // listed as completed / no longer my action
   topRank?: number;
   due: string; // "Today", "Tomorrow", "This week", "Overdue", a short date, or ""
   dueDate?: string; // exact ISO date when the source gives one (JSON block)
@@ -57,4 +60,5 @@ export interface ParsedBrief {
   meetings: BriefMeeting[];
   counts: BriefCount[];
   executiveSummary?: string;
+  changes?: string[]; // "What changed today" lines
 }

@@ -32,6 +32,7 @@ export function BriefItemRow({
   briefTitle,
   onTake,
   onDismiss,
+  onComplete,
 }: {
   item: BriefItem;
   isLast?: boolean;
@@ -40,6 +41,7 @@ export function BriefItemRow({
   briefTitle?: string;
   onTake?: (edit?: TakeEdit) => void;
   onDismiss?: () => void;
+  onComplete?: () => void;
 }) {
   const q = quadrantStyle[item.quadrant];
   const taken = status === "taken";
@@ -63,6 +65,9 @@ export function BriefItemRow({
           {since && <Pill label={`Pending since ${since}`} bg="var(--badge-warn-bg)" color="var(--badge-warn-text)" />}
           {item.waitingOnCustomer && <Pill label="Awaiting customer" bg="var(--delegate-bg)" color="var(--delegate-text)" />}
           {item.canClose && <Pill label="Can close" bg="var(--later-bg)" color="var(--success)" />}
+          {item.changedToday && <Pill dot label="Changed today" bg="var(--accent-tint)" color="var(--accent)" />}
+          {item.engagement && <Pill label="Engagement" bg="var(--schedule-bg)" color="var(--schedule-text)" />}
+          {item.completed && <Pill dot label="Completed" bg="var(--later-bg)" color="var(--success)" />}
           {status === "done" && <Pill label="Done before" bg="var(--later-bg)" color="var(--later-text)" />}
         </div>
 
@@ -110,6 +115,15 @@ export function BriefItemRow({
         />
       )}
 
+      {onComplete && taken && (
+        <div style={{ display: "flex", gap: 6, flex: "none", alignItems: "center" }}>
+          <button className="btn btn-primary" onClick={onComplete} title="The brief says this is done — tick the Planner task">
+            <CheckIcon size={13} color="#fff" />
+            Mark done in Planner
+          </button>
+        </div>
+      )}
+
       {onTake && !editing && (
         <div style={{ display: "flex", gap: 6, flex: "none", alignItems: "center" }}>
           {taken ? (
@@ -155,11 +169,11 @@ function SuggestedReply({ text }: { text: string }) {
   return (
     <div className="reply">
       <SparklesIcon size={15} style={{ flex: "none", marginTop: 2, color: "var(--accent)" }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="reply__text" style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: "var(--accent)", marginBottom: 2 }}>Suggested reply</div>
         {text}
       </div>
-      <button className="btn" onClick={copy} style={{ padding: "4px 10px", fontSize: 11.5 }} title="Copy reply">
+      <button className="btn reply__copy" onClick={copy} style={{ fontSize: 11.5 }} title="Copy reply">
         <CopyIcon size={12} />
         {copied ? "Copied" : "Copy"}
       </button>

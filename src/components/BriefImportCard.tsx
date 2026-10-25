@@ -63,7 +63,7 @@ export function BriefImportCard({
         label={open ? "Paste your brief" : "Today's brief"}
         hint={open ? "AI sorts it instantly: yours, your team's, and waiting on customer. Nothing to click." : undefined}
         right={
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
+          <div className="section-actions" style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
             <button
               className="btn"
               onClick={copyInstructions}

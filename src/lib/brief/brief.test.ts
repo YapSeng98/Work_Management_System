@@ -3,6 +3,7 @@ import { normalize, parseBrief } from "./index";
 import ownership from "./fixtures/ownership.txt?raw";
 import daily from "./fixtures/daily.txt?raw";
 import json from "./fixtures/json.txt?raw";
+import ownershipV3 from "./fixtures/ownership-v3.txt?raw";
 
 const titles = (b: ReturnType<typeof parseBrief>, owner: string) =>
   b.items.filter((i) => i.owner === owner).map((i) => i.title).sort();
@@ -63,6 +64,48 @@ describe("ownership report (Section A / B / C)", () => {
   it("gives every item a stable id", () => {
     expect(parseBrief(ownership).items.map((i) => i.id)).toEqual(b.items.map((i) => i.id));
     expect(new Set(b.items.map((i) => i.id)).size).toBe(b.items.length);
+  });
+});
+
+describe("ownership report, newer layout (what changed, new emails, engagements)", () => {
+  const b = parseBrief(ownershipV3);
+
+  it("is detected without the SECTION A/B/C prefixes", () => {
+    expect(b.format).toBe("ownership");
+  });
+
+  it("keeps the same mine/team split for the shared content", () => {
+    const base = parseBrief(ownership);
+    expect(titles(b, "me")).toEqual(expect.arrayContaining(titles(base, "me")));
+    for (const t of titles(base, "team").filter((x) => x !== "Invoice Resubmission Bug")) expect(titles(b, "team")).toContain(t);
+    expect(find(b, "Data Center Migration Risk").owner).toBe("team"); // not merged with the "data migration" engagement
+  });
+
+  it("lists what changed today and flags the items it names", () => {
+    expect(b.changes).toEqual(["INC0044444 escalated by the customer this morning.", "New request from Globex about release timing."]);
+    expect(find(b, "Invoice Resubmission Bug").changedToday).toBe(true);
+    expect(find(b, "Payroll Export Failure").changedToday).toBeUndefined();
+  });
+
+  it("files new emails to note under FYI, never under waiting-on-customer", () => {
+    expect(b.items.filter((i) => i.owner === "fyi" && !i.completed).map((i) => i.title).sort()).toEqual(["Vendor Security Advisory", "Year-End Support Roster"]);
+    expect(find(b, "Year-End Support Roster").from).toBe("Service Desk");
+    expect(titles(b, "others")).toEqual([]);
+  });
+
+  it("moves completed items out of every action list", () => {
+    expect(find(b, "Release Checklist Sent")).toMatchObject({ owner: "fyi", completed: true });
+    // listed by the team AND as completed (handed over) → completed wins
+    expect(find(b, "Invoice Resubmission Bug")).toMatchObject({ owner: "fyi", completed: true });
+  });
+
+  it("never lets a completed listing take an item out of My Actions", () => {
+    expect(titles(b, "me")).toEqual(expect.arrayContaining(["Payroll Export Failure", "ERP Release Questions", "ERP Report Extra Columns"]));
+  });
+
+  it("marks engagements and assigns them by their Owner field", () => {
+    expect(find(b, "Globex Data Migration Review")).toMatchObject({ owner: "me", engagement: true });
+    expect(find(b, "Globex Analytics Rollout")).toMatchObject({ owner: "team", engagement: true, ownerName: "Alex Lim" });
   });
 });
 

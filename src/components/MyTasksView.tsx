@@ -97,6 +97,7 @@ function TaskList({
       {tasks.map((t) => (
         <div key={t.id} className="item" style={{ flexWrap: "nowrap", gap: 12, padding: "11px 12px" }}>
           <button
+            className="task-check"
             onClick={() => onToggleDone(t)}
             title={t.done ? "Mark as not done" : "Mark as done"}
             aria-label={t.done ? "Mark as not done" : "Mark as done"}

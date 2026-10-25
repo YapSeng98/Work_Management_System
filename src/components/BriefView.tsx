@@ -5,7 +5,7 @@ import { Card, SectionHeader } from "./Card";
 import { BriefItemRow, type ItemStatus } from "./BriefItemRow";
 import { MeetingsCard } from "./MeetingsCard";
 import { StatTiles } from "./StatTiles";
-import { FlagIcon, ReplyIcon, SparklesIcon, TargetIcon, UsersIcon } from "./icons";
+import { CheckIcon, FlagIcon, ReplyIcon, SparklesIcon, TargetIcon, UsersIcon } from "./icons";
 
 export function BriefView({
   brief,
@@ -14,6 +14,7 @@ export function BriefView({
   sinceOf,
   onTake,
   onDismiss,
+  onComplete,
 }: {
   brief: ParsedBrief;
   hidden: (id: string) => boolean;
@@ -21,13 +22,15 @@ export function BriefView({
   sinceOf: (item: BriefItem) => string | undefined;
   onTake: (item: BriefItem, edit?: TakeEdit) => void;
   onDismiss: (item: BriefItem) => void;
+  onComplete: (item: BriefItem) => void;
 }) {
   const shared = { statusOf, sinceOf, onTake, onDismiss, briefTitle: brief.title };
   const visible = brief.items.filter((i) => !hidden(i.id));
   const mine = visible.filter((i) => i.owner === "me");
   const team = visible.filter((i) => i.owner === "team");
   const chase = visible.filter((i) => i.owner === "others");
-  const fyi = visible.filter((i) => i.owner === "fyi");
+  const fyi = visible.filter((i) => i.owner === "fyi" && !i.completed);
+  const completed = visible.filter((i) => i.completed);
   const doToday = mine.filter((i) => i.quadrant === "do" && statusOf(i) !== "taken").length;
 
   return (
@@ -42,10 +45,20 @@ export function BriefView({
         ]}
       />
 
-      {(brief.executiveSummary || brief.counts.length > 0) && (
+      {(brief.executiveSummary || brief.counts.length > 0 || (brief.changes?.length ?? 0) > 0) && (
         <Card ai>
           <SectionHeader ai icon={<SparklesIcon size={15} />} label="AI summary" />
           {brief.executiveSummary && <div style={{ fontSize: 15, lineHeight: 1.6, color: "var(--text)" }}>{brief.executiveSummary}</div>}
+          {brief.changes && brief.changes.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)" }}>What changed today</div>
+              <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 3, fontSize: 13.5, color: "var(--text)" }}>
+                {brief.changes.map((c, i) => (
+                  <li key={i}>{c}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           {brief.counts.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {brief.counts.map((c) => (
@@ -88,8 +101,21 @@ export function BriefView({
       {brief.meetings.length > 0 && (
         <MeetingsCard meetings={brief.meetings.map((m) => ({ id: m.id, time: m.when, title: m.title }))} />
       )}
+      {completed.length > 0 && (
+        <ItemList
+          icon={<CheckIcon size={15} />}
+          label="Completed — no longer your action"
+          hint="Still open in your Planner? Mark it done here."
+          items={completed}
+          empty=""
+          statusOf={statusOf}
+          sinceOf={sinceOf}
+          briefTitle={brief.title}
+          onComplete={onComplete}
+        />
+      )}
       {fyi.length > 0 && (
-        <ItemList icon={<FlagIcon size={15} />} label="FYI" hint="No action needed" items={fyi} empty="" statusOf={statusOf} sinceOf={sinceOf} briefTitle={brief.title} />
+        <ItemList icon={<FlagIcon size={15} />} label="FYI — worth noting" hint="No action needed" items={fyi} empty="" statusOf={statusOf} sinceOf={sinceOf} briefTitle={brief.title} />
       )}
     </>
   );
@@ -106,6 +132,7 @@ function ItemList({
   briefTitle,
   onTake,
   onDismiss,
+  onComplete,
 }: {
   icon: ReactNode;
   label: string;
@@ -117,6 +144,7 @@ function ItemList({
   briefTitle?: string;
   onTake?: (item: BriefItem, edit?: TakeEdit) => void;
   onDismiss?: (item: BriefItem) => void;
+  onComplete?: (item: BriefItem) => void;
 }) {
   return (
     <Card>
@@ -131,6 +159,7 @@ function ItemList({
             briefTitle={briefTitle}
             onTake={onTake && ((edit) => onTake(item, edit))}
             onDismiss={onDismiss && (() => onDismiss(item))}
+            onComplete={onComplete && (() => onComplete(item))}
           />
         ))}
         {items.length === 0 && <div style={{ fontSize: 14, color: "var(--text-faint)", padding: "4px 10px" }}>{empty}</div>}

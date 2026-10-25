@@ -72,12 +72,16 @@ as it's pasted and saved to the `briefs` table. Three layouts are understood, tr
    box) copies a section to append to your AI prompt; the AI then ends its report with
    a JSON block listing every item once, with owner, urgency, risk, due date, Top-10 rank
    and a suggested reply.
-2. **Ownership report** — Section A (my actions only), Section B (team actions),
-   Section C (waiting on customer), Escalations, Aging items, Top 10, Executive summary.
-   The brief's own split decides ownership: A → *Pending you*, B → *Owned by your team*
-   (shown separately, not your task), C → *Waiting on others* (or an "awaiting customer"
-   badge when A/B also own it). Your name is read from the brief ("Required Action From …")
-   to tell your Top-10 rows from colleagues'.
+2. **Ownership report** — My actions (Section A), Team actions (B), Waiting on customer (C),
+   Escalations, Aging items, Top 10 / Today priorities, Executive summary — with or without
+   the "SECTION A/B/C" prefixes, in any letter case, with or without markdown. The brief's
+   own split decides ownership: A → *Pending you*, B → *Owned by your team* (not your task),
+   C → *Waiting on others* (or an "awaiting customer" badge when A/B also own it). Also read:
+   *What changed today* (listed in the AI summary; named items get a "Changed today" badge),
+   *Important new emails to note* (→ FYI), *Decision support / … engagements* ("Engagement"
+   badge, owner from its Owner field) and *Completed / no longer my action* (→ Completed;
+   offers "Mark done in Planner" when a Planner task is still open). Your name is read from
+   the brief ("Required Action From …") to tell your Top-10 rows from colleagues'.
 3. **Executive Work Brief** — the earlier `=====`-divided report (Requires my response,
    Escalations, Open support incidents, UAT tracker, Customer follow-up, Risks, Top 10,
    Personal attention). Tables pasted as tab-separated text are reconstructed, and every

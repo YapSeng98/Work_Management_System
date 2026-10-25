@@ -194,6 +194,12 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
     }).finally(() => inFlight.current.delete(item.id));
   }
 
+  /** The brief lists this as completed and a Planner task still covers it: tick that task. */
+  function handleCompleteFromBrief(item: BriefItem) {
+    const task = openTaskFor(item);
+    if (task) handleToggleDone(task);
+  }
+
   function handleDismiss(item: BriefItem) {
     void run(async () => {
       await db.insertDismissed(item.id, item.title);
@@ -323,6 +329,7 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
                 sinceOf={sinceOf}
                 onTake={handleTake}
                 onDismiss={handleDismiss}
+                onComplete={handleCompleteFromBrief}
               />
             )}
           </>

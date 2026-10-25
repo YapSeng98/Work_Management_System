@@ -157,7 +157,7 @@ button {
 
 code {
   font-family: var(--font-mono);
-  font-size: 0.92em;
+  font-size: max(11px, 0.92em);
   padding: 1px 5px;
   border-radius: 5px;
   background: var(--accent-tint);
@@ -222,6 +222,29 @@ code {
     position: static;
     border-radius: 20px;
     padding: 12px;
+  }
+  .topbar .tabs {
+    order: 3;
+    width: 100%;
+  }
+  .topbar .tab {
+    flex: 1;
+  }
+  .section-title {
+    flex-wrap: wrap;
+  }
+  .section-actions {
+    width: 100%;
+    justify-content: flex-start !important;
+  }
+  .reply {
+    flex-wrap: wrap;
+  }
+  .reply__text {
+    flex-basis: calc(100% - 30px) !important;
+  }
+  .reply__copy {
+    margin-left: auto;
   }
 }
 
@@ -457,6 +480,48 @@ code {
   border-radius: 12px;
   background: var(--ai-gradient-soft);
   border: 1px solid var(--accent-tint-border);
+}
+
+/* ---------------------------------------------------------------------------
+   Touch screens and phones: finger-sized targets, and 16px form text so iOS
+   Safari doesn't zoom the page when a field is tapped.
+   --------------------------------------------------------------------------- */
+@media (pointer: coarse), (max-width: 640px) {
+  .btn {
+    min-height: 42px;
+    padding: 9px 15px;
+    font-size: 13.5px;
+  }
+  .btn-icon {
+    width: 42px !important;
+    height: 42px !important;
+  }
+  .tab {
+    min-height: 40px;
+    padding: 9px 14px;
+    font-size: 14px;
+  }
+  .task-check {
+    position: relative;
+    width: 32px !important;
+    height: 32px !important;
+  }
+  .task-check::before {
+    content: "";
+    position: absolute;
+    inset: -6px; /* 44px tap area around the 32px circle */
+  }
+  .input,
+  .composer textarea,
+  select,
+  textarea,
+  input {
+    font-size: 16px !important;
+  }
+  .chip {
+    font-size: 11.5px;
+    padding: 4px 10px;
+  }
 }
 
 /* ---------------------------------------------------------------------------
