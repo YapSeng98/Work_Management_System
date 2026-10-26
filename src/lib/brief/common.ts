@@ -22,6 +22,23 @@ export function parseLooseDate(text: string): Date | undefined {
   return d && !Number.isNaN(d.getTime()) ? d : undefined;
 }
 
+/** A subject reduced to its words: no "RE:"/"FW:" prefixes, case or punctuation. */
+export function normTitle(title: string): string {
+  let t = title.toLowerCase().trim();
+  while (/^(re|fw|fwd)\s*:/.test(t)) t = t.replace(/^(re|fw|fwd)\s*:\s*/, "");
+  return t.replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+/**
+ * An item's id, the same whichever report layout it came from: its ticket number if it has
+ * one, else its cleaned-up subject. Taken / dismissed / Planner task ids all key off this,
+ * so the same thread pasted in a different layout is still recognised.
+ */
+export function itemId(refs: string[], title: string): string {
+  const ref = [...refs].sort()[0];
+  return hashId("i:" + (ref ?? normTitle(title)));
+}
+
 export function hashId(text: string): string {
   let h = 0;
   for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;

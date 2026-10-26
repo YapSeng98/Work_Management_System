@@ -1,4 +1,4 @@
-import { dueFromText, hashId, maxPriority, parseLooseDate, rankItem, sortItems } from "./common";
+import { dueFromText, hashId, itemId, maxPriority, parseLooseDate, rankItem, sortItems } from "./common";
 import { Merger, TableReader, type Mention } from "./execFormat";
 import type { BriefCount, BriefItem, BriefMeeting, ItemKind, Owner, ParsedBrief, Priority } from "./types";
 
@@ -82,6 +82,7 @@ export function parsePriorityBrief(text: string): ParsedBrief {
     const note = (s: string) => (e.summary = e.summary ? `${e.summary} — ${s}` : s);
     if (name === "subject") {
       e.hasSubject = true;
+      e.subject ??= v;
       e.text += ` ${v}`;
       e.matchText = `${e.matchText ?? ""} ${v}`;
       if (!e.title) e.title = v;
@@ -184,7 +185,8 @@ export function parsePriorityBrief(text: string): ParsedBrief {
       const { score, quadrant } = rankItem({ priority, owner, kind, due, topRank: a.topRank, escalation: a.escalation });
       const refs = [...a.refs];
       return {
-        id: hashId("p:" + (refs[0] ?? a.title!.toLowerCase().replace(/^(re|fw|fwd):\s*/i, ""))),
+        id: itemId(refs, a.subject ?? a.title!),
+        subject: a.subject,
         kind,
         priority,
         title: a.title!,

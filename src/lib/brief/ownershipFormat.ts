@@ -1,4 +1,4 @@
-import { dueFromText, hashId, maxPriority, parseLooseDate, priorityRank, rankItem, refsIn, sortItems, toPriority } from "./common";
+import { dueFromText, itemId, maxPriority, parseLooseDate, priorityRank, rankItem, refsIn, sortItems, toPriority } from "./common";
 import { Merger, TableReader, type Acc, type Mention } from "./execFormat";
 import type { BriefCount, BriefItem, ItemKind, Owner, ParsedBrief, Priority } from "./types";
 
@@ -148,6 +148,7 @@ export function parseOwnershipBrief(text: string): ParsedBrief {
 
     if (name === "customer") entry.customer = v;
     else if (name === "subject") {
+      entry.subject ??= v;
       entry.text += ` ${v}`;
       entry.matchText = `${entry.matchText ?? ""} ${v}`;
     }
@@ -313,7 +314,8 @@ export function parseOwnershipBrief(text: string): ParsedBrief {
       const { score, quadrant } = rankItem({ priority, owner, kind, due, topRank: a.topRank, escalation: a.escalation, personal: a.personal });
       const refs = [...a.refs];
       return {
-        id: hashId("o:" + (refs[0] ?? a.title!.toLowerCase().replace(/^(re|fw|fwd):\s*/i, ""))),
+        id: itemId(refs, a.subject ?? a.title!),
+        subject: a.subject,
         kind,
         priority,
         title: a.title!,

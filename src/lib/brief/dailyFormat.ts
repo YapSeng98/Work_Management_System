@@ -1,5 +1,5 @@
 import type { Quadrant } from "../../types";
-import { hashId, refsIn, sortItems } from "./common";
+import { hashId, itemId, refsIn, sortItems } from "./common";
 import type { BriefItem, BriefMeeting, ItemKind, Owner, ParsedBrief, Priority } from "./types";
 
 /**
@@ -232,7 +232,7 @@ function toItem(
   else quadrant = "later";
 
   return {
-    id: hashId(raw.kind + raw.header),
+    id: itemId(refs, title),
     kind: raw.kind,
     priority: raw.priority,
     title,

@@ -1,4 +1,4 @@
-import { dueFromText, hashId, maxPriority, parseLooseDate, rankItem, refsIn, sortItems, toPriority } from "./common";
+import { dueFromText, hashId, itemId, maxPriority, parseLooseDate, rankItem, refsIn, sortItems, toPriority } from "./common";
 import type { BriefCount, BriefItem, BriefMeeting, ItemKind, Owner, ParsedBrief, Priority } from "./types";
 
 /**
@@ -223,6 +223,7 @@ export interface Acc {
   canClose?: boolean;
   engagement?: boolean;
   completed?: boolean;
+  subject?: string;
 }
 
 export interface Mention {
@@ -253,6 +254,7 @@ export interface Mention {
   canClose?: boolean;
   engagement?: boolean;
   completed?: boolean;
+  subject?: string;
 }
 
 export class Merger {
@@ -330,6 +332,7 @@ export class Merger {
     acc.canClose ??= m.canClose;
     acc.engagement ||= m.engagement;
     acc.completed ||= m.completed;
+    acc.subject ??= m.subject;
     return acc;
   }
 }
@@ -428,6 +431,7 @@ export function parseExecutiveBrief(text: string): ParsedBrief {
           const name = rawName.toLowerCase();
           if (name === "subject") {
             block.title = value;
+            block.subject = value;
             block.titleWeight = 3;
             block.text += " " + value;
           } else if (name === "ticket") block.text += " " + value;
@@ -621,7 +625,8 @@ export function parseExecutiveBrief(text: string): ParsedBrief {
       const { score, quadrant } = rankItem({ priority, owner, kind, due, topRank: a.topRank, escalation: a.escalation, personal: a.personal });
       const refs = [...a.refs];
       return {
-        id: hashId("x:" + (refs[0] ?? a.title!.toLowerCase().replace(/^(re|fw|fwd):\s*/i, ""))),
+        id: itemId(refs, a.subject ?? a.title!),
+        subject: a.subject,
         kind,
         priority,
         title: a.title!,

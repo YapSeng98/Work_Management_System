@@ -261,3 +261,21 @@ describe("priority-section brief (Critical / High / Medium / Other / Waiting)", 
     });
   });
 });
+
+describe("item ids are the same whichever layout a thread came from", () => {
+  it("text-only and JSON versions of a brief give their shared items identical ids", () => {
+    const text = parseBrief(priority);
+    const json = parseBrief(priorityJson);
+    const textIds = new Set(text.items.map((i) => i.id));
+    for (const item of json.items) expect(textIds.has(item.id), item.title).toBe(true);
+  });
+  it("ids are unique within a brief, even when two items share a ticket", () => {
+    const b = parseBrief('{"work_items": [ {"subject": "INC0099999: deploy the fix"}, {"subject": "INC0099999: send the RCA"} ]}');
+    expect(new Set(b.items.map((i) => i.id)).size).toBe(2);
+  });
+  it("RE:/FW: prefixes and punctuation don't change an id", () => {
+    const a = parseBrief('{"items": [ {"title": "x", "subject": "RE: FW: Release checklist!"} ]}').items[0].id;
+    const b = parseBrief('{"items": [ {"title": "y", "subject": "release checklist"} ]}').items[0].id;
+    expect(a).toBe(b);
+  });
+});

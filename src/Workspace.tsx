@@ -11,7 +11,7 @@ import { ArchiveView } from "./components/ArchiveView";
 import type { ItemStatus } from "./components/BriefItemRow";
 import { XIcon } from "./components/icons";
 
-import { parseBrief, type BriefItem, type ParsedBrief } from "./lib/brief";
+import { normTitle, parseBrief, type BriefItem, type ParsedBrief } from "./lib/brief";
 import * as db from "./lib/db";
 import { taskIdFor, type TakeEdit } from "./lib/planner";
 import { archivedItems, carriedOver } from "./lib/carryOver";
@@ -119,14 +119,26 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
   }, [briefs, parsed]);
 
   /** An open task covers an item if it came from the same item or shares a ticket number. */
-  function openTaskFor(item: BriefItem) {
+  /**
+   * The Planner task that covers an item: same derived id, a shared ticket number, or the
+   * same subject. Matching on more than the id means a thread pasted in a different layout,
+   * or reworded in a later brief, is still recognised — so Take never creates a duplicate.
+   */
+  function taskFor(item: BriefItem, done: boolean) {
     const id = taskIds.get(item.id);
-    return tasks.find((t) => !t.done && (t.id === id || t.refs.some((r) => item.refs.includes(r))));
+    const names = [item.title, item.subject].filter(Boolean).map((n) => normTitle(n!)).filter((n) => n.length > 8);
+    return tasks.find(
+      (t) => t.done === done && (t.id === id || t.refs.some((r) => item.refs.includes(r)) || names.includes(normTitle(t.title))),
+    );
+  }
+
+  function openTaskFor(item: BriefItem) {
+    return taskFor(item, false);
   }
 
   function statusOf(item: BriefItem): ItemStatus {
     if (openTaskFor(item)) return "taken";
-    return tasks.some((t) => t.id === taskIds.get(item.id) && t.done) ? "done" : "new";
+    return taskFor(item, true) ? "done" : "new";
   }
 
   function sinceOf(item: BriefItem) {
@@ -198,7 +210,7 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
   function handleTake(item: BriefItem, edit?: TakeEdit) {
     if (openTaskFor(item) || inFlight.current.has(item.id)) return;
     inFlight.current.add(item.id);
-    const doneBefore = tasks.find((t) => t.id === taskIds.get(item.id) && t.done);
+    const doneBefore = taskFor(item, true); // reopen it rather than create a second task
     void run(async () => {
       if (doneBefore) {
         // Same item came back after being completed — reopen the existing task.

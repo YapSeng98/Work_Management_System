@@ -4,10 +4,11 @@ import { extractBriefJson, parseJsonBrief } from "./jsonFormat";
 import { looksLikeOwnershipBrief, parseOwnershipBrief } from "./ownershipFormat";
 import { looksLikePriorityBrief, parsePriorityBrief } from "./priorityFormat";
 import type { ParsedBrief } from "./types";
-import { parseLooseDate, rankItem, refsIn, sortItems } from "./common";
+import { hashId, normTitle, parseLooseDate, rankItem, refsIn, sortItems } from "./common";
 import { keywords } from "./execFormat";
 
 export type { BriefItem, BriefMeeting, ItemKind, Owner, ParsedBrief, Priority } from "./types";
+export { normTitle } from "./common";
 
 /**
  * Analyse pasted brief text. Prefers the machine-readable JSON block when present
@@ -16,6 +17,20 @@ export type { BriefItem, BriefMeeting, ItemKind, Owner, ParsedBrief, Priority } 
  * Runs entirely in the browser.
  */
 export function parseBrief(text: string): ParsedBrief {
+  return uniqueIds(parseAny(text));
+}
+
+/** Two items in one brief may share a ticket (e.g. "deploy the fix" and "send the RCA"). */
+function uniqueIds(brief: ParsedBrief): ParsedBrief {
+  const seen = new Set<string>();
+  for (const item of brief.items) {
+    if (seen.has(item.id)) item.id = hashId(`${item.id}|${normTitle(item.title)}`);
+    seen.add(item.id);
+  }
+  return brief;
+}
+
+function parseAny(text: string): ParsedBrief {
   const json = extractBriefJson(text);
   if (json) {
     // The report text around the JSON still helps: its heading carries the date, and a

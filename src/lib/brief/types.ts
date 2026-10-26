@@ -13,6 +13,7 @@ export interface BriefItem {
   kind: ItemKind;
   priority: Priority;
   title: string;
+  subject?: string; // the email subject, when the report gives one (identity across layouts)
   from?: string;
   customer?: string;
   summary?: string;

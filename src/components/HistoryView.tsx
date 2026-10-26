@@ -61,10 +61,13 @@ export function HistoryView({
   onViewBrief: (id: string) => void;
   onClearAll: () => void;
 }) {
-  const grouped = new Map<string, HistoryEntry[]>();
+  // Same action on the same item on the same day (e.g. taken, deleted, taken again) shows once, "×2".
+  const grouped = new Map<string, (HistoryEntry & { times: number })[]>();
   for (const entry of entries) {
     const list = grouped.get(entry.date) ?? [];
-    list.push(entry);
+    const same = list.find((e) => e.action === entry.action && e.title === entry.title);
+    if (same) same.times++;
+    else list.push({ ...entry, times: 1 });
     grouped.set(entry.date, list);
   }
   const dates = Array.from(grouped.keys()).sort((a, b) => (a < b ? 1 : -1));
@@ -154,6 +157,11 @@ export function HistoryView({
                     </div>
                     <div style={{ flex: 1, minWidth: 0, fontSize: 14, overflowWrap: "anywhere" }}>
                       {entry.title} <span style={{ color: "var(--text-faint)" }}>— {actionLabel(entry.action)}</span>
+                      {entry.times > 1 && (
+                        <span className="chip" style={{ marginLeft: 8, background: "var(--divider)", color: "var(--text-muted)" }} title="Repeated the same day">
+                          ×{entry.times}
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--text-faint)", flex: "none" }}>
                       {entry.time}

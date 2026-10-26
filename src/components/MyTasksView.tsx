@@ -4,6 +4,7 @@ import { Card, SectionHeader } from "./Card";
 import { ArrowRightIcon, CheckIcon, ListChecksIcon, XIcon } from "./icons";
 import { PLANNER_URL } from "../lib/planner";
 import { isoDate } from "../lib/dates";
+import { normTitle } from "../lib/brief";
 
 const quadrantHint: Record<Quadrant, string> = {
   do: "Urgent & important — do today",
@@ -36,6 +37,12 @@ export function MyTasksView({
   onRemove: (task: MyTask) => void;
 }) {
   const open = tasks.filter((t) => !t.done);
+  // Open tasks that share a ticket or subject with an earlier-listed one: likely duplicates.
+  const dupes = new Set<string>();
+  open.forEach((t, i) => {
+    const title = normTitle(t.title);
+    if (open.slice(0, i).some((o) => o.refs.some((r) => t.refs.includes(r)) || (title.length > 8 && normTitle(o.title) === title))) dupes.add(t.id);
+  });
   // Done tasks close automatically: they show under "Closed today" for the rest of the day.
   const done = tasks.filter((t) => t.done && t.closedOn === isoDate(new Date()));
 
@@ -66,7 +73,7 @@ export function MyTasksView({
               hint={quadrantHint[q]}
               count={list.length}
             />
-            <TaskList tasks={list} onToggleDone={onToggleDone} onRemove={onRemove} />
+            <TaskList tasks={list} onToggleDone={onToggleDone} onRemove={onRemove} dupes={dupes} />
           </Card>
         );
       })}
@@ -87,10 +94,12 @@ function TaskList({
   tasks,
   onToggleDone,
   onRemove,
+  dupes,
 }: {
   tasks: MyTask[];
   onToggleDone: (task: MyTask) => void;
   onRemove: (task: MyTask) => void;
+  dupes?: Set<string>;
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2, margin: "0 -10px" }}>
@@ -137,6 +146,11 @@ function TaskList({
               </div>
             )}
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+              {dupes?.has(t.id) && (
+                <span className="chip" style={{ background: "var(--badge-warn-bg)", color: "var(--badge-warn-text)" }} title="Same ticket or subject as another open task — delete the extra one with ✕">
+                  Possible duplicate
+                </span>
+              )}
               {t.due && (
                 <span className="chip" style={{ background: t.due === "Overdue" || t.due === "Today" ? "var(--badge-urgent-bg)" : "var(--divider)", color: t.due === "Overdue" || t.due === "Today" ? "var(--badge-urgent-text)" : "var(--text-muted)" }}>
                   Due {t.due.toLowerCase()}

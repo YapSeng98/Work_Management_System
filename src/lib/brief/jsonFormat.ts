@@ -1,4 +1,4 @@
-import { dueFromDate, dueFromText, hashId, rankItem, refsIn, sortItems, toPriority } from "./common";
+import { dueFromDate, dueFromText, hashId, itemId, rankItem, refsIn, sortItems, toPriority } from "./common";
 import type { BriefItem, ItemKind, Owner, ParsedBrief, Priority } from "./types";
 
 /**
@@ -101,7 +101,8 @@ export function parseJsonBrief(data: Record<string, unknown>, fallbackDate?: Dat
       const since = isoDay(x.waiting_since);
       const { score, quadrant } = rankItem({ priority, owner, kind, due, topRank, escalation });
       return {
-        id: hashId("x:" + (refs[0] ?? (str(x.subject) ?? title).toLowerCase().replace(/^(re|fw|fwd):\s*/i, ""))),
+        id: itemId(refs, str(x.subject) ?? title),
+        subject: str(x.subject),
         kind,
         priority,
         title,
