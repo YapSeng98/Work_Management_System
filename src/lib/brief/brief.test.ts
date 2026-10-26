@@ -215,6 +215,16 @@ describe("priority-section brief (Critical / High / Medium / Other / Waiting)", 
       expect(b.items.find((i) => i.title.startsWith("Estimate"))?.priority).toBe("low");
       expect(b.items.find((i) => i.title.startsWith("INC0055555"))?.owner).toBe("others");
     });
+    it("fills in details the sparse JSON leaves out, from the report text", () => {
+      const payroll = b.items.find((i) => i.title.startsWith("INC0011111"))!;
+      expect(payroll.summary).toContain("I own the payroll interface fix."); // "Why it needs my action"
+      expect(payroll.summary).toContain("Risk if delayed: Payroll for 3,000 staff is delayed.");
+      expect(payroll.escalation).toBe(true); // it sits under Critical Actions
+      expect(b.items.find((i) => i.title.startsWith("RE: SR2222222"))?.summary).toContain("RCA was assigned to me.");
+      expect(b.meetings.map((m) => m.when)).toEqual(["10:00 AM", "2:30 PM"]); // the JSON has no meetings
+      expect(b.items).toHaveLength(6); // the JSON decides the list; nothing added from the text
+    });
+
     it("takes the Top 5 ranks from the report text", () => {
       expect(b.items.find((i) => i.title.startsWith("INC0011111"))?.topRank).toBe(1);
       expect(b.items.find((i) => i.title.startsWith("RE: SR2222222"))?.topRank).toBe(2);

@@ -21,7 +21,11 @@ export function parseBrief(text: string): ParsedBrief {
     // The report text around the JSON still helps: its heading carries the date, and a
     // "Top N … Actions" list gives the ranking the JSON may leave out.
     const heading = text.split(/\r?\n/).find((l) => /brief/i.test(l) && parseLooseDate(l)) ?? "";
-    return addTopRanks(parseJsonBrief(json, parseLooseDate(heading)), normalize(text));
+    const clean = normalize(text);
+    const brief = parseJsonBrief(json, parseLooseDate(heading));
+    // A sparse JSON (e.g. "work_items") leaves out details the report text has: fill them in.
+    if (looksLikePriorityBrief(clean)) enrichFromReport(brief, parsePriorityBrief(clean));
+    return addTopRanks(brief, clean);
   }
   const clean = normalize(text);
   if (looksLikeOwnershipBrief(clean)) return parseOwnershipBrief(clean);
@@ -127,4 +131,42 @@ function addTopRanks(brief: ParsedBrief, text: string): ParsedBrief {
   }
   sortItems(brief.items);
   return brief;
+}
+
+const norm = (t: string) => t.toLowerCase().replace(/^(re|fw|fwd):\s*/, "").replace(/[^a-z0-9]+/g, " ").trim();
+
+/**
+ * The JSON stays the list of items; the report text only adds what an item is missing —
+ * why it needs action, risk if delayed, customer, status, due date, escalation — plus the
+ * meetings and counts when the JSON has none. Items are matched by ticket number, else by
+ * the subject/title text, else by 3+ shared keywords.
+ */
+function enrichFromReport(brief: ParsedBrief, report: ParsedBrief) {
+  const used = new Set<string>();
+  for (const item of brief.items) {
+    const words = keywords(`${item.title} ${item.summary ?? ""}`);
+    const match =
+      report.items.find((r) => !used.has(r.id) && r.refs.some((x) => item.refs.includes(x))) ??
+      report.items.find((r) => !used.has(r.id) && (norm(r.title) === norm(item.title) || (r.summary ?? "").toLowerCase().includes(norm(item.title)))) ??
+      report.items
+        .filter((r) => !used.has(r.id))
+        .map((r) => ({ r, n: [...keywords(`${r.title} ${r.summary ?? ""}`)].filter((w) => words.has(w)).length }))
+        .filter((x) => x.n >= 3)
+        .sort((a, b) => b.n - a.n)[0]?.r;
+    if (!match) continue;
+    used.add(match.id);
+    const extra = (match.summary ?? "")
+      .split(" — ")
+      .filter((part) => part && !(item.summary ?? "").includes(part) && norm(part) !== norm(item.title));
+    if (extra.length) item.summary = [item.summary, ...extra].filter(Boolean).join(" — ");
+    item.customer ??= match.customer;
+    item.status ??= match.status;
+    item.action ??= match.action;
+    if (!item.due && match.due) item.due = match.due;
+    if (match.escalation && !item.escalation) item.escalation = true;
+    for (const r of match.refs) if (!item.refs.includes(r)) item.refs.push(r);
+    Object.assign(item, rankItem(item));
+  }
+  if (!brief.meetings.length) brief.meetings = report.meetings;
+  if (!brief.counts.length) brief.counts = report.counts;
 }
