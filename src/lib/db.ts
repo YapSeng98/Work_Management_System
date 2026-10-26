@@ -272,7 +272,11 @@ export async function fetchPrompt(): Promise<SavedPrompt> {
   const res = await db().from("brief_settings").select("prompt, updated_at").maybeSingle();
   if (missingTable(res.error)) return local();
   const row = check(res) as { prompt: string; updated_at: string } | null;
-  return row ? { text: row.prompt, updatedAt: row.updated_at, where: "account" } : { text: "", where: "account" };
+  if (row) return { text: row.prompt, updatedAt: row.updated_at, where: "account" };
+  // A prompt saved in this browser before brief_settings existed: move it into the account.
+  const earlier = local();
+  if (earlier.text) return savePrompt(earlier.text);
+  return { text: "", where: "account" };
 }
 
 export async function savePrompt(text: string): Promise<SavedPrompt> {
