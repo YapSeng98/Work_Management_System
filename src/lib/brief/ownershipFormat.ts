@@ -1,4 +1,4 @@
-import { dueFromText, hashId, maxPriority, priorityRank, rankItem, refsIn, sortItems, toPriority } from "./common";
+import { dueFromText, hashId, maxPriority, parseLooseDate, priorityRank, rankItem, refsIn, sortItems, toPriority } from "./common";
 import { Merger, TableReader, type Acc, type Mention } from "./execFormat";
 import type { BriefCount, BriefItem, ItemKind, Owner, ParsedBrief, Priority } from "./types";
 
@@ -349,5 +349,6 @@ export function parseOwnershipBrief(text: string): ParsedBrief {
     for (const item of items) if (item.refs.some((r) => refs.includes(r))) item.changedToday = true;
   }
 
-  return { format: "ownership", title, items: sortItems(items), meetings: [], counts, executiveSummary, changes };
+  const date = parseLooseDate(lines.slice(0, 5).join(" "));
+  return { format: "ownership", title, date, items: sortItems(items), meetings: [], counts, executiveSummary, changes };
 }

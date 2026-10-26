@@ -121,5 +121,9 @@ task (priority from urgency, due date from the brief, details in its notes) and 
 - **Already taken** — an item counts as taken if an open task came from the same item
   *or shares a ticket number*, so a reworded follow-up in tomorrow's brief isn't taken twice.
   A completed task whose item comes back can be reopened with **Take again**.
+- **Carried over** — items that were yours in an earlier brief (last 14 days), that you
+  neither took nor dismissed, and that today's brief no longer mentions (by ticket, id or
+  title) are listed under *Pending you* with the date they came from. Only an item's most
+  recent mention counts, so anything a newer brief completed or reassigned is not carried.
 - **History tab** — stats for the last 7 days, every past brief (click **View** to
   reopen it on Today) and the full activity log, all read from the database.

@@ -33,11 +33,13 @@ export function BriefItemRow({
   onTake,
   onDismiss,
   onComplete,
+  carriedFrom,
 }: {
   item: BriefItem;
   isLast?: boolean;
   status: ItemStatus;
   since?: string;
+  carriedFrom?: string; // short date of the earlier brief this item came from
   briefTitle?: string;
   onTake?: (edit?: TakeEdit) => void;
   onDismiss?: () => void;
@@ -53,6 +55,7 @@ export function BriefItemRow({
       <div style={{ flex: "1 1 300px", minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
           <Pill dot label={quadrantLabel[item.quadrant]} bg={q.bg} color={q.text} />
+          {carriedFrom && <Pill label={`From ${carriedFrom} brief`} bg="var(--badge-warn-bg)" color="var(--badge-warn-text)" />}
           {item.kind !== "fyi" && <Pill label={cap(item.priority)} {...priorityStyle[item.priority]} />}
           {item.topRank && <Pill label={`Top ${item.topRank}`} bg="var(--accent-tint)" color="var(--accent)" />}
           {item.category && !/^waiting on/i.test(item.category) && <Pill label={item.category} bg="var(--divider)" color="var(--text-muted)" />}

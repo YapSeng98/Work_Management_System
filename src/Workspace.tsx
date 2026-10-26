@@ -13,6 +13,7 @@ import { XIcon } from "./components/icons";
 import { parseBrief, type BriefItem, type ParsedBrief } from "./lib/brief";
 import * as db from "./lib/db";
 import { taskIdFor, type TakeEdit } from "./lib/planner";
+import { carriedOver } from "./lib/carryOver";
 import type { HistoryAction, HistoryEntry, MyTask, Quadrant, Tab } from "./types";
 
 /** Parse pasted brief text; null if it contains nothing recognisable. */
@@ -132,6 +133,14 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
     const earliest = dates.sort()[0];
     return earliest && earliest < current.briefDate ? shortDate(earliest) : undefined;
   }
+
+  // Items from earlier briefs that slipped out of today's — only on the latest brief.
+  const carried =
+    current && current.id === briefs[0]?.id
+      ? carriedOver(briefs.map((b) => ({ briefDate: b.briefDate, title: b.title, items: parsed.get(b.id)?.items ?? [] }))).filter(
+          (c) => !dismissed.has(c.item.id) && statusOf(c.item) === "new",
+        )
+      : [];
 
   const briefSummaries: BriefSummary[] = briefs.map((b) => {
     const p = parsed.get(b.id);
@@ -351,6 +360,7 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
                 onTake={handleTake}
                 onDismiss={handleDismiss}
                 onComplete={handleCompleteFromBrief}
+                carried={carried}
               />
             )}
           </>

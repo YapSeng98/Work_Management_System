@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
 import type { BriefItem, ParsedBrief } from "../lib/brief";
 import type { TakeEdit } from "../lib/planner";
+import type { CarriedItem } from "../lib/carryOver";
 import { Card, SectionHeader } from "./Card";
 import { BriefItemRow, type ItemStatus } from "./BriefItemRow";
 import { MeetingsCard } from "./MeetingsCard";
 import { StatTiles } from "./StatTiles";
-import { CheckIcon, FlagIcon, ReplyIcon, SparklesIcon, TargetIcon, UsersIcon } from "./icons";
+import { CheckIcon, ClockIcon, FlagIcon, ReplyIcon, SparklesIcon, TargetIcon, UsersIcon } from "./icons";
 
 export function BriefView({
   brief,
@@ -15,8 +16,10 @@ export function BriefView({
   onTake,
   onDismiss,
   onComplete,
+  carried = [],
 }: {
   brief: ParsedBrief;
+  carried?: CarriedItem[];
   hidden: (id: string) => boolean;
   statusOf: (item: BriefItem) => ItemStatus;
   sinceOf: (item: BriefItem) => string | undefined;
@@ -39,6 +42,7 @@ export function BriefView({
         tiles={[
           { value: String(doToday), label: "to do today", accent: true },
           { value: String(mine.length), label: "pending you" },
+          ...(carried.length ? [{ value: String(carried.length), label: "carried over" }] : []),
           ...(team.length ? [{ value: String(team.length), label: "owned by your team" }] : []),
           { value: String(chase.length), label: "waiting on others" },
           ...(brief.meetings.length ? [{ value: String(brief.meetings.length), label: "meetings" }] : []),
@@ -80,6 +84,30 @@ export function BriefView({
         empty="Nothing pending you. 🎉"
         {...shared}
       />
+      {carried.length > 0 && (
+        <Card>
+          <SectionHeader
+            icon={<ClockIcon size={15} />}
+            label="Carried over"
+            hint="Yours in an earlier brief, not taken or dismissed, and not mentioned today"
+            count={carried.length}
+          />
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, margin: "0 -10px" }}>
+            {carried.map(({ item, fromDate }) => (
+              <BriefItemRow
+                key={item.id}
+                item={item}
+                status={statusOf(item)}
+                since={sinceOf(item)}
+                briefTitle={brief.title}
+                carriedFrom={new Date(fromDate + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                onTake={(edit) => onTake(item, edit)}
+                onDismiss={() => onDismiss(item)}
+              />
+            ))}
+          </div>
+        </Card>
+      )}
       {team.length > 0 && (
         <ItemList
           icon={<UsersIcon size={15} />}

@@ -1,4 +1,4 @@
-import { dueFromText, hashId, maxPriority, rankItem, refsIn, sortItems, toPriority } from "./common";
+import { dueFromText, hashId, maxPriority, parseLooseDate, rankItem, refsIn, sortItems, toPriority } from "./common";
 import type { BriefCount, BriefItem, BriefMeeting, ItemKind, Owner, ParsedBrief, Priority } from "./types";
 
 /**
@@ -645,5 +645,6 @@ export function parseExecutiveBrief(text: string): ParsedBrief {
       };
     });
 
-  return { format: "executive", title, items: sortItems(items), meetings, counts, executiveSummary };
+  const date = parseLooseDate(lines.slice(0, 5).join(" "));
+  return { format: "executive", title, date, items: sortItems(items), meetings, counts, executiveSummary };
 }

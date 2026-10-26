@@ -14,6 +14,8 @@ describe("ownership report (Section A / B / C)", () => {
 
   it("is detected and keeps the AI's counts and bottom line", () => {
     expect(b.format).toBe("ownership");
+    expect(b.date).toBeUndefined(); // no date in this sample's heading
+    expect(parseBrief(ownership.replace("EXECUTIVE WORK BRIEF", "EXECUTIVE WORK BRIEF – 23 Oct 2026")).date?.getDate()).toBe(23);
     expect(b.counts).toHaveLength(5);
     expect(b.counts[0]).toEqual({ label: "My Actions", value: 3 });
     expect(b.executiveSummary).toMatch(/^Three items need Jane Tan/);
