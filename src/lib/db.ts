@@ -256,6 +256,37 @@ export async function clearBriefData() {
   check(await db().from("brief_history").delete().neq("id", none));
 }
 
+// --- Saved AI prompt ----------------------------------------------------------
+
+export interface SavedPrompt {
+  text: string; // "" when nothing saved yet
+  updatedAt?: string;
+  where: "account" | "browser"; // browser until brief_settings exists
+}
+
+const missingTable = (e: { message: string; code?: string } | null) =>
+  !!e && /could not find the table|does not exist|PGRST205/i.test(`${e.message} ${e.code ?? ""}`);
+
+export async function fetchPrompt(): Promise<SavedPrompt> {
+  const local = () => ({ text: readLocal<string>("prompt", ""), updatedAt: readLocal<string | undefined>("prompt-at", undefined), where: "browser" as const });
+  const res = await db().from("brief_settings").select("prompt, updated_at").maybeSingle();
+  if (missingTable(res.error)) return local();
+  const row = check(res) as { prompt: string; updated_at: string } | null;
+  return row ? { text: row.prompt, updatedAt: row.updated_at, where: "account" } : { text: "", where: "account" };
+}
+
+export async function savePrompt(text: string): Promise<SavedPrompt> {
+  const updatedAt = new Date().toISOString();
+  const res = await db().from("brief_settings").upsert({ prompt: text, updated_at: updatedAt });
+  if (missingTable(res.error)) {
+    writeLocal("prompt", text);
+    writeLocal("prompt-at", updatedAt);
+    return { text, updatedAt, where: "browser" };
+  }
+  check(res);
+  return { text, updatedAt, where: "account" };
+}
+
 // --- Dismissed items --------------------------------------------------------
 
 export async function fetchDismissed(): Promise<Set<string>> {

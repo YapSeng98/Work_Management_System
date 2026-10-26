@@ -55,6 +55,7 @@ export function BriefItemRow({
           <Pill dot label={quadrantLabel[item.quadrant]} bg={q.bg} color={q.text} />
           {item.kind !== "fyi" && <Pill label={cap(item.priority)} {...priorityStyle[item.priority]} />}
           {item.topRank && <Pill label={`Top ${item.topRank}`} bg="var(--accent-tint)" color="var(--accent)" />}
+          {item.category && !/^waiting on/i.test(item.category) && <Pill label={item.category} bg="var(--divider)" color="var(--text-muted)" />}
           {item.escalation && <Pill label="Escalation" bg="var(--critical-bg)" color="#fff" />}
           {(item.risk === "critical" || item.risk === "high") && (
             <Pill label={`${cap(item.risk)} risk`} {...priorityStyle[item.risk === "critical" ? "high" : "medium"]} />
@@ -80,6 +81,7 @@ export function BriefItemRow({
             item.from && `Last from ${item.from}`,
             kindLabel[item.kind],
             item.stage && cap(item.stage),
+            item.source && `via ${item.source}`,
             item.ownerName && item.ownerReason.startsWith("Owned by") ? undefined : item.ownerReason,
           ]
             .filter(Boolean)

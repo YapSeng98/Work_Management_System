@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { AI_INSTRUCTIONS, type ParsedBrief } from "../lib/brief";
+import type { ParsedBrief } from "../lib/brief";
+import type { SavedPrompt } from "../lib/db";
 import { Card, SectionHeader } from "./Card";
-import { CopyIcon, SparklesIcon } from "./icons";
+import { BookIcon, CopyIcon, SparklesIcon } from "./icons";
 import { Pill } from "./Pill";
 
 /**
@@ -11,25 +12,30 @@ import { Pill } from "./Pill";
  */
 export function BriefImportCard({
   brief,
+  prompt,
   onText,
   onClear,
+  onOpenPrompt,
 }: {
   brief: ParsedBrief | null;
+  prompt: SavedPrompt | null;
   onText: (text: string) => boolean;
   onClear: () => void;
+  onOpenPrompt: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  async function copyInstructions() {
+  async function copyPrompt() {
+    if (!prompt?.text) return onOpenPrompt(); // nothing saved yet — open the editor instead
     try {
-      await navigator.clipboard.writeText(AI_INSTRUCTIONS);
+      await navigator.clipboard.writeText(prompt.text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      window.prompt("Copy these instructions and add them to the end of your AI prompt:", AI_INSTRUCTIONS);
+      window.prompt("Copy your prompt:", prompt.text);
     }
   }
 
@@ -53,7 +59,7 @@ export function BriefImportCard({
   const team = brief?.items.filter((i) => i.owner === "team").length ?? 0;
   const chase = brief?.items.filter((i) => i.owner === "others").length ?? 0;
 
-  const formatLabel = { json: "Structured data", ownership: "Ownership report", executive: "Executive report", daily: "Daily brief" };
+  const formatLabel = { json: "Structured data", ownership: "Ownership report", priority: "Priority report", executive: "Executive report", daily: "Daily brief" };
 
   return (
     <Card ai={open}>
@@ -64,13 +70,13 @@ export function BriefImportCard({
         hint={open ? "AI sorts it instantly: yours, your team's, and waiting on customer. Nothing to click." : undefined}
         right={
           <div className="section-actions" style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" }}>
-            <button
-              className="btn"
-              onClick={copyInstructions}
-              title="Add these to the end of your AI prompt so the report includes data this app reads exactly"
-            >
+            <button className="btn" onClick={copyPrompt} title={prompt?.text ? "Copy your saved AI prompt" : "Save your AI prompt first"}>
               <CopyIcon size={13} />
-              {copied ? "Copied ✓" : "Copy AI instructions"}
+              {copied ? "Copied ✓" : "Copy my prompt"}
+            </button>
+            <button className="btn" onClick={onOpenPrompt} title="View or edit your saved AI prompt">
+              <BookIcon size={13} />
+              My prompt
             </button>
             {brief && (
               <>

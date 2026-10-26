@@ -194,3 +194,58 @@ describe("bad input", () => {
     expect(performance.now() - t0).toBeLessThan(1500);
   });
 });
+
+import priority from "./fixtures/priority.txt?raw";
+import priorityJson from "./fixtures/priority-json.txt?raw";
+
+describe("priority-section brief (Critical / High / Medium / Other / Waiting)", () => {
+  describe("with the work_items JSON block", () => {
+    const b = parseBrief(priorityJson);
+    it("reads the JSON, with the date from the heading", () => {
+      expect(b.format).toBe("json");
+      expect(b.items).toHaveLength(6);
+      expect(b.date?.getDate()).toBe(26);
+      expect(b.counts.map((c) => c.label)).toEqual(["Critical", "High", "Medium", "Normal", "Waiting on customer"]);
+    });
+    it("maps P1–P4 and puts 'Waiting On Customer' items with others", () => {
+      expect(b.items.find((i) => i.title.startsWith("INC0011111"))).toMatchObject({ owner: "me", priority: "critical", category: "Production incident", source: "Helpdesk folder", due: expect.any(String) });
+      expect(b.items.find((i) => i.title.startsWith("RE: SR2222222"))?.priority).toBe("high");
+      expect(b.items.find((i) => i.title.startsWith("Estimate"))?.priority).toBe("low");
+      expect(b.items.find((i) => i.title.startsWith("INC0055555"))?.owner).toBe("others");
+    });
+    it("takes the Top 5 ranks from the report text", () => {
+      expect(b.items.find((i) => i.title.startsWith("INC0011111"))?.topRank).toBe(1);
+      expect(b.items.find((i) => i.title.startsWith("RE: SR2222222"))?.topRank).toBe(2);
+      expect(b.items.find((i) => i.title.startsWith("UAT sign-off"))?.topRank).toBe(3);
+      expect(b.items.find((i) => i.title.startsWith("DS-202600123"))?.topRank).toBe(4);
+      expect(b.items.find((i) => i.title.startsWith("Estimate"))?.topRank).toBe(5);
+      expect(b.items[0].title).toMatch(/^INC0011111/);
+    });
+  });
+
+  describe("without JSON (report text only)", () => {
+    const b = parseBrief(priority);
+    it("is detected and keeps counts", () => {
+      expect(b.format).toBe("priority");
+      expect(b.counts).toHaveLength(5);
+      expect(b.date?.getDate()).toBe(26);
+    });
+    it("files each section with the right owner and priority", () => {
+      expect(find(b, "Payroll export outage")).toMatchObject({ owner: "me", priority: "critical", escalation: true, topRank: 1, due: "Today", customer: "Acme Health / Payroll" });
+      expect(find(b, "RCA for duplicate invoices")).toMatchObject({ owner: "me", priority: "high", topRank: 2 });
+      expect(find(b, "UAT sign-off for release 4.2")).toMatchObject({ priority: "high", topRank: 3 });
+      expect(find(b, "Internal estimate review")).toMatchObject({ priority: "low", topRank: 5 });
+      expect(find(b, "Data correction batch")).toMatchObject({ owner: "others" });
+    });
+    it("merges summary-table rows into items and adds the rest by owner", () => {
+      expect(find(b, "Decisions Support ticket DS-202600123")).toMatchObject({ owner: "me", stage: "Decisions Support", topRank: 4 });
+      expect(b.items.find((i) => i.refs.includes("DS-202600456"))?.owner).toBe("others"); // waiting on vendor
+      expect(b.items.find((i) => i.refs.includes("INC0077777"))).toMatchObject({ owner: "team", ownerName: "Alex Lim" });
+      expect(b.items.filter((i) => i.refs.includes("INC0011111"))).toHaveLength(1); // summary row merged
+    });
+    it("lists today's meetings", () => {
+      expect(b.meetings.map((m) => m.when)).toEqual(["10:00 AM", "2:30 PM"]);
+      expect(b.meetings[0].title).toBe("Release 4.2 go/no-go");
+    });
+  });
+});

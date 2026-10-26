@@ -70,6 +70,7 @@ const HEADER_WORDS = [
   "next action required",
   "target date",
   "current state",
+  "current status",
   "status",
   "cr / incident",
   "cr/incident",
@@ -90,6 +91,13 @@ const HEADER_WORDS = [
   "count",
   "category",
   "why it matters",
+  "description",
+  "ticket number",
+  "topic",
+  "waiting on who",
+  "waiting on",
+  "incident number",
+  "incident",
 ];
 // Longest first so "next action required" wins over "next action".
 const HEADERS_BY_LENGTH = [...HEADER_WORDS].sort((a, b) => b.length - a.length);
@@ -118,6 +126,11 @@ export class TableReader {
       .filter((c) => c.length > 0);
 
     let rest = cells;
+    if (this.headers.length === 0 && isPipe) {
+      // A markdown table's first row is always its header, whatever the column names.
+      this.headers = cells.map((c) => c.toLowerCase());
+      return [];
+    }
     if (this.headers.length === 0) {
       const headers: string[] = [];
       let i = 0;

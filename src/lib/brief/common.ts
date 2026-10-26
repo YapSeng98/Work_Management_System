@@ -11,6 +11,17 @@ export function refsIn(text: string): string[] {
   return [...new Set(text.match(REF_RE) ?? [])];
 }
 
+/** "26 Oct 2026", "26 October 2026", "Oct 26, 2026" or "2026-10-26" anywhere in the text. */
+export function parseLooseDate(text: string): Date | undefined {
+  const iso = text.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+  if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+  const dmy = text.match(/\b(\d{1,2})\s+([A-Za-z]{3,9})\.?,?\s+(\d{4})\b/);
+  const mdy = text.match(/\b([A-Za-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4})\b/);
+  const s = dmy ? `${dmy[1]} ${dmy[2]} ${dmy[3]}` : mdy ? `${mdy[2]} ${mdy[1]} ${mdy[3]}` : "";
+  const d = s ? new Date(s) : undefined;
+  return d && !Number.isNaN(d.getTime()) ? d : undefined;
+}
+
 export function hashId(text: string): string {
   let h = 0;
   for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0;

@@ -22,9 +22,12 @@ export function readLocal<T>(key: string, fallback: T): T {
   }
 }
 
+/** Clear the browser fallback's brief data. The saved AI prompt is a setting and is kept. */
 export function clearLocal() {
   try {
-    for (const key of Object.keys(localStorage)) if (key.startsWith("dbrief-local:")) localStorage.removeItem(key);
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("dbrief-local:") && !key.startsWith("dbrief-local:prompt")) localStorage.removeItem(key);
+    }
   } catch {
     // Storage blocked — nothing to clear.
   }

@@ -30,6 +30,8 @@ export interface BriefItem {
   changedToday?: boolean; // named in "What changed today"
   engagement?: boolean; // from a customer-engagement / decision-support section
   completed?: boolean; // listed as completed / no longer my action
+  category?: string; // e.g. "RCA", "Deployment", "Decisions Support"
+  source?: string; // e.g. "Support folder", "Inbox"
   topRank?: number;
   due: string; // "Today", "Tomorrow", "This week", "Overdue", a short date, or ""
   dueDate?: string; // exact ISO date when the source gives one (JSON block)
@@ -53,7 +55,7 @@ export interface BriefCount {
 }
 
 export interface ParsedBrief {
-  format: "json" | "ownership" | "executive" | "daily";
+  format: "json" | "ownership" | "priority" | "executive" | "daily";
   title: string;
   date?: Date;
   items: BriefItem[];

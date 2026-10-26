@@ -1,0 +1,115 @@
+# Daily Work Brief – 26 Oct 2026
+
+All names and tickets in this file are made up.
+
+## Executive Summary
+
+| Priority | Count | Description |
+|----------|--------|-------------|
+| 🚨 Critical | 1 | Incidents / Escalations |
+| 🔴 High | 2 | RCA / Deployments / UAT / Commitments |
+| 🟠 Medium | 1 | Support Tickets / Decisions Support |
+| 🟡 Normal | 1 | Other Actions |
+| 🟢 Waiting On Customer | 1 | Monitoring |
+
+## 🚨 Critical Actions
+
+### 1. Payroll export outage
+- **Subject:** INC0011111: Payroll export failing in production
+- **Customer/System:** Acme Health / Payroll
+- **Latest Status:** Second failure overnight; customer escalated.
+- **Why it needs my action:** I own the payroll interface fix.
+- **Required Action:** Confirm root cause and deploy the hotfix.
+- **Due Date:** Today
+- **Risk if delayed:** Payroll for 3,000 staff is delayed.
+
+## 🔴 High Priority Actions
+
+### 2. RCA for duplicate invoices
+- **Subject:** RE: SR2222222 RCA request – duplicate invoices
+- **Customer/System:** Globex / Billing
+- **Latest Status:** Customer asked for the RCA by Friday.
+- **Why it needs my action:** RCA was assigned to me.
+- **Required Action:** Write and send the RCA.
+- **Due Date:** End of this week
+- **Risk if delayed:** Customer commitment missed.
+
+### 3. UAT sign-off for release 4.2
+- **Subject:** UAT sign-off – release 4.2
+- **Customer/System:** Acme Health
+- **Latest Status:** All test cases passed; waiting for my validation.
+- **Why it needs my action:** I am the UAT validator.
+- **Required Action:** Validate and sign off.
+- **Due Date:** Not stated
+- **Risk if delayed:** Release slips a week.
+
+## 🟠 Medium Priority Actions
+
+### 4. Decisions Support ticket DS-202600123
+- **Subject:** DS-202600123: Report filter clarification
+- **Customer/System:** Decisions Support
+- **Latest Status:** Developer waiting for my answer on filter logic.
+- **Required Action:** Reply with the filter rules.
+
+## 🟡 Other Pending Actions
+
+### 5. Internal estimate review
+- **Subject:** Estimate for warehouse onboarding
+- **Latest Status:** Colleague asked for my comments.
+- **Required Action:** Comment on the estimate.
+
+## 🟢 Waiting On Customer
+
+### 6. Data correction batch
+- **Subject:** INC0055555: Data correction batch
+- **Customer/System:** Acme Health
+- **Latest Status:** Fix delivered; waiting for customer confirmation.
+- **Required Action:** Follow up if no reply by Wednesday.
+
+## Decisions Support Summary
+
+| Ticket Number | Topic | Current Status | Next Action | Waiting On Who |
+|---|---|---|---|---|
+| DS-202600123 | Report filter clarification | Waiting for my answer | Reply with filter rules | Me |
+| DS-202600456 | Export format change | With vendor | Vendor to confirm effort | Vendor |
+
+## Helpdesk Support Summary
+
+| Incident Number | Customer | Current Owner | Next Action |
+|---|---|---|---|
+| INC0011111 | Acme Health | Me | Deploy hotfix |
+| INC0077777 | Globex | Alex Lim | Investigate login errors |
+
+## Meetings & Approvals Requiring My Attention Today
+
+- 10:00 AM – Release 4.2 go/no-go
+- 2:30 PM – Payroll incident review
+
+## Top 5 Recommended Actions For Today
+
+1. Deploy the payroll hotfix for INC0011111
+2. Send the duplicate-invoice RCA (SR2222222)
+3. Validate and sign off release 4.2 UAT
+4. Answer DS-202600123 filter question
+5. Comment on the warehouse onboarding estimate
+
+
+## Machine-readable JSON
+
+```json
+{
+  "critical_count": 1,
+  "high_count": 2,
+  "medium_count": 1,
+  "normal_count": 1,
+  "waiting_on_customer_count": 1,
+  "work_items": [
+    { "priority": "P1", "category": "Production incident", "subject": "INC0011111: Payroll export failing in production", "customer": "Acme Health", "owner": "Jane Tan", "required_action": "Confirm root cause and deploy the hotfix.", "status": "Customer escalated", "due_date": "2026-10-26", "source": "Helpdesk folder" },
+    { "priority": "P2", "category": "RCA", "subject": "RE: SR2222222 RCA request – duplicate invoices", "customer": "Globex", "owner": "Jane Tan", "required_action": "Write and send the RCA.", "status": "RCA requested by Friday", "due_date": "2026-10-30", "source": "Inbox" },
+    { "priority": "P2", "category": "UAT", "subject": "UAT sign-off – release 4.2", "customer": "Acme Health", "owner": "Jane Tan", "required_action": "Validate and sign off.", "status": "Waiting for my validation", "due_date": "", "source": "Inbox" },
+    { "priority": "P3", "category": "Decisions Support", "subject": "DS-202600123: Report filter clarification", "customer": "Decisions Support", "owner": "Jane Tan", "required_action": "Reply with the filter rules.", "status": "Developer waiting", "due_date": "", "source": "Decisions Support folder" },
+    { "priority": "P4", "category": "Internal", "subject": "Estimate for warehouse onboarding", "customer": "", "owner": "Jane Tan", "required_action": "Comment on the estimate.", "status": "Comments requested", "due_date": "", "source": "Inbox" },
+    { "priority": "Waiting On Customer", "category": "Waiting On Customer", "subject": "INC0055555: Data correction batch", "customer": "Acme Health", "owner": "Acme Health", "required_action": "Follow up if no reply by Wednesday.", "status": "Waiting for customer confirmation", "due_date": "", "source": "Helpdesk folder" }
+  ]
+}
+```

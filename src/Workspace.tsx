@@ -6,6 +6,7 @@ import { HistoryView, type BriefSummary } from "./components/HistoryView";
 import { BriefImportCard } from "./components/BriefImportCard";
 import { BriefView } from "./components/BriefView";
 import { MyTasksView } from "./components/MyTasksView";
+import { PromptPanel } from "./components/PromptPanel";
 import type { ItemStatus } from "./components/BriefItemRow";
 import { XIcon } from "./components/icons";
 
@@ -44,6 +45,8 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [storeMode, setStoreMode] = useState<db.StoreMode>("supabase");
+  const [prompt, setPrompt] = useState<db.SavedPrompt | null>(null);
+  const [promptOpen, setPromptOpen] = useState(false);
   const [taskIds, setTaskIds] = useState<Map<string, string>>(new Map()); // brief item id → Planner task id
   const inFlight = useRef(new Set<string>()); // item keys being saved, to ignore double clicks
 
@@ -69,8 +72,9 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
       });
     (async () => {
       setStoreMode(await db.detectStore());
-      const [b, t, d, h] = await Promise.all([db.fetchBriefs(), db.fetchTasks(), db.fetchDismissed(), db.fetchHistory()]);
+      const [b, t, d, h, p] = await Promise.all([db.fetchBriefs(), db.fetchTasks(), db.fetchDismissed(), db.fetchHistory(), db.fetchPrompt()]);
       if (cancelled) return;
+      setPrompt(p);
       setBriefs(b);
       setTasks(t);
       setDismissed(d);
@@ -216,6 +220,16 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
     });
   }
 
+  async function handleSavePrompt(text: string) {
+    setError(null);
+    try {
+      setPrompt(await db.savePrompt(text));
+    } catch (err) {
+      setError(`Couldn't save your prompt: ${message(err)}`);
+      throw err; // keeps the editor open with the text
+    }
+  }
+
   function handleClearAll() {
     if (!window.confirm("Delete ALL pasted briefs, dismissed items and history? This can't be undone.")) return;
     const fromBrief = tasks;
@@ -320,7 +334,14 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
                 <code>supabase/schema.sql</code> is run in the Planner's Supabase project.
               </div>
             )}
-            <BriefImportCard brief={brief} onText={handleBriefText} onClear={handleClearBrief} />
+            {promptOpen && prompt && <PromptPanel saved={prompt} onSave={handleSavePrompt} onClose={() => setPromptOpen(false)} />}
+            <BriefImportCard
+              brief={brief}
+              prompt={prompt}
+              onText={handleBriefText}
+              onClear={handleClearBrief}
+              onOpenPrompt={() => setPromptOpen((o) => !o)}
+            />
             {brief && (
               <BriefView
                 brief={brief}

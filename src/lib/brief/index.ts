@@ -2,7 +2,10 @@ import { parseDailyBrief } from "./dailyFormat";
 import { looksLikeExecutiveBrief, parseExecutiveBrief } from "./execFormat";
 import { extractBriefJson, parseJsonBrief } from "./jsonFormat";
 import { looksLikeOwnershipBrief, parseOwnershipBrief } from "./ownershipFormat";
+import { looksLikePriorityBrief, parsePriorityBrief } from "./priorityFormat";
 import type { ParsedBrief } from "./types";
+import { parseLooseDate, rankItem, refsIn, sortItems } from "./common";
+import { keywords } from "./execFormat";
 
 export type { BriefItem, BriefMeeting, ItemKind, Owner, ParsedBrief, Priority } from "./types";
 
@@ -14,9 +17,15 @@ export type { BriefItem, BriefMeeting, ItemKind, Owner, ParsedBrief, Priority } 
  */
 export function parseBrief(text: string): ParsedBrief {
   const json = extractBriefJson(text);
-  if (json) return parseJsonBrief(json);
+  if (json) {
+    // The report text around the JSON still helps: its heading carries the date, and a
+    // "Top N … Actions" list gives the ranking the JSON may leave out.
+    const heading = text.split(/\r?\n/).find((l) => /brief/i.test(l) && parseLooseDate(l)) ?? "";
+    return addTopRanks(parseJsonBrief(json, parseLooseDate(heading)), normalize(text));
+  }
   const clean = normalize(text);
   if (looksLikeOwnershipBrief(clean)) return parseOwnershipBrief(clean);
+  if (looksLikePriorityBrief(clean)) return parsePriorityBrief(clean);
   if (looksLikeExecutiveBrief(clean)) return parseExecutiveBrief(clean);
   return parseDailyBrief(clean);
 }
@@ -43,43 +52,79 @@ export function normalize(text: string): string {
 }
 
 /**
- * Appended to the user's own AI prompt so the report ends with data this app can
- * read exactly. Kept generic — no names or company details.
+ * The JSON section the app reads best. Appended to the user's own AI prompt (the saved
+ * prompt's "Add the app's data section" button, or "Copy AI instructions"). Generic —
+ * no names or company details.
  */
 export const AI_INSTRUCTIONS = `==================================================
-MACHINE-READABLE DATA (for my Daily Brief app)
+MACHINE-READABLE JSON (for my Daily Brief app)
 ==================================================
 
-After the report, output ONE \`\`\`json code block. Include every distinct work item from the report EXACTLY ONCE — merge mentions of the same ticket or email thread from different sections into one item. Use exactly this structure and only the listed values:
+End the report with ONE \`\`\`json code block containing every work item from the report EXACTLY ONCE (merge mentions of the same ticket or email thread). Use exactly this structure:
 
 {
   "brief_date": "YYYY-MM-DD",
-  "bottom_line": "1-2 sentence summary of what matters most today",
-  "counts": { "need_my_reply": 0, "waiting_on_me": 0, "waiting_on_customer": 0, "uat_pending": 0, "deployment_pending": 0, "escalations": 0, "high_risk": 0 },
+  "bottom_line": "1-2 sentences: what matters most today",
+  "counts": { "critical": 0, "high": 0, "medium": 0, "normal": 0, "waiting_on_customer": 0 },
   "items": [
     {
       "title": "Short task title starting with a verb",
       "subject": "Original email subject",
       "tickets": ["INC0000000"],
-      "customer": "Customer or team",
-      "from": "Person who last acted / is waiting",
+      "category": "Production incident | RCA | Deployment | UAT | Commitment | Decisions Support | Support ticket | Meeting action | Other",
+      "customer": "Customer / system",
+      "from": "Person who last wrote / is waiting",
       "owner": "Person who owns the next action",
       "waiting_on": "me | my_team | customer | third_party | none",
       "type": "reply | action | decision | follow_up | fyi",
-      "stage": "investigation | rca | design | validation | uat | deployment | closure | other",
-      "status": "Current status in one line",
+      "status": "Latest status in one line",
+      "why": "Why it needs my action",
       "next_action": "The next concrete step",
       "recommended_reply": "Suggested reply if a reply is expected from me, else null",
-      "can_close": false,
       "due": "YYYY-MM-DD or null",
-      "waiting_since": "YYYY-MM-DD or null",
       "urgency": "critical | high | medium | low",
-      "risk": "critical | high | medium | low",
-      "escalation": true,
-      "top_rank": 1
+      "risk": "Risk if delayed, in one line",
+      "escalation": false,
+      "top_rank": 1,
+      "source": "Inbox | Support folder | Decisions Support folder | Flagged | Meeting"
     }
   ],
   "meetings": [ { "when": "YYYY-MM-DD HH:MM", "title": "Meeting title" } ]
 }
 
-Rules: "waiting_on" is "me" ONLY when a reply, decision or next action is explicitly expected from me (being in CC or in the thread is not enough); "my_team" when a colleague owns the next action; "customer" or "third_party" when we are waiting on them; "none" for FYI. "top_rank" is the item's position in the TOP 10 PRIORITIES list, or null. Use null for unknown dates. Output valid JSON only inside the code block.`;
+Rules: "urgency" maps P1 → critical, P2 → high, P3 → medium, P4 → low. "waiting_on" is "me" ONLY when a reply, decision or next action is explicitly expected from me (being in CC or in the thread is not enough); "my_team" when a colleague owns it; "customer" or "third_party" when we are waiting on them; "none" for FYI. "top_rank" is the item's position in the Top 5 list, else null. Use null for unknown values. Output valid JSON only inside the code block.`;
+
+/**
+ * Read a "Top 5 Recommended Actions" (or "Top N Priorities") numbered list from the
+ * report text and give each matching item its rank — by ticket number, else by 2+
+ * shared keywords with its title. Items that already have a rank keep it.
+ */
+function addTopRanks(brief: ParsedBrief, text: string): ParsedBrief {
+  const lines = text.split("\n");
+  const start = lines.findIndex((l) => /^[^A-Za-z0-9]*top \d+\b.*(actions|priorities)/i.test(l) && !l.includes(":"));
+  if (start < 0 || brief.items.some((i) => i.topRank)) return brief;
+  let rank = 0;
+  for (const line of lines.slice(start + 1)) {
+    const m = line.match(/^(\d+)[.)]\s+(.+)$/);
+    if (!m) {
+      if (rank && line.trim() && !/^[-•]/.test(line)) break; // next section
+      continue;
+    }
+    rank = Number(m[1]);
+    const refs = refsIn(m[2]);
+    const words = keywords(m[2]);
+    const match =
+      brief.items.find((i) => !i.topRank && i.refs.some((r) => refs.includes(r))) ??
+      brief.items
+        .filter((i) => !i.topRank)
+        .map((i) => ({ i, n: [...keywords(`${i.title} ${i.summary ?? ""}`)].filter((w) => words.has(w)).length }))
+        .filter((x) => x.n >= 2)
+        .sort((a, b) => b.n - a.n)[0]?.i;
+    if (match) {
+      match.topRank = rank;
+      Object.assign(match, rankItem({ ...match, topRank: rank }));
+    }
+  }
+  sortItems(brief.items);
+  return brief;
+}

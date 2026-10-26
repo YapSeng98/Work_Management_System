@@ -2,7 +2,7 @@
 -- Run in that project's SQL Editor — safe to re-run after updates.
 --
 -- Only NEW tables prefixed brief_ are created here (pasted briefs, dismissed items,
--- history); the Planner's own tables are not touched. Tasks taken from a brief are
+-- history, settings such as the saved AI prompt); the Planner's own tables are not touched. Tasks taken from a brief are
 -- created in the Planner's public.tasks through its sync_push() function (the same
 -- path the Planner app uses) and need nothing from this file.
 --
@@ -35,15 +35,22 @@ create table if not exists public.brief_history (
   created_at  timestamptz not null default now()
 );
 
+create table if not exists public.brief_settings (
+  user_id     uuid primary key default auth.uid() references auth.users (id) on delete cascade,
+  prompt      text not null default '',      -- the user's own AI prompt, copied from the app each morning
+  updated_at  timestamptz not null default now()
+);
+
 create index if not exists brief_reports_user_created_idx on public.brief_reports (user_id, created_at desc);
 create index if not exists brief_history_user_created_idx on public.brief_history (user_id, created_at desc);
 
 alter table public.brief_reports    enable row level security;
 alter table public.brief_dismissed  enable row level security;
 alter table public.brief_history    enable row level security;
+alter table public.brief_settings   enable row level security;
 
 grant select, insert, update, delete on public.brief_reports, public.brief_dismissed,
-  public.brief_history to authenticated;
+  public.brief_history, public.brief_settings to authenticated;
 
 drop policy if exists "own rows" on public.brief_reports;
 create policy "own rows" on public.brief_reports
@@ -57,6 +64,11 @@ create policy "own rows" on public.brief_dismissed
 
 drop policy if exists "own rows" on public.brief_history;
 create policy "own rows" on public.brief_history
+  for all to authenticated
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+
+drop policy if exists "own rows" on public.brief_settings;
+create policy "own rows" on public.brief_settings
   for all to authenticated
   using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 

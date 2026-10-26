@@ -28,6 +28,14 @@ npm test         # regression tests (made-up sample briefs in src/lib/brief/fixt
 
 Pushing to `main` deploys to GitHub Pages via `.github/workflows/deploy.yml`.
 
+### Your AI prompt
+
+**Copy my prompt** / **My prompt** on the Today paste card keep your own AI prompt in
+`brief_settings` (your account; the browser until that table exists), so you can copy it
+from any device. Until one is saved, the editor starts from a generic template with
+`<YOUR NAME>`-style placeholders — personal details never live in this public repo.
+**Add data section** appends the JSON section the app reads best (`AI_INSTRUCTIONS`).
+
 ### Data kept
 
 Whenever a new brief is saved, briefs older than 60 days, dismissed items older than
@@ -56,7 +64,8 @@ keeps one copy. **History → Clear all data** wipes briefs, dismissed items and
 | --- | --- |
 | `src/App.tsx` | Auth gate: setup notice → sign-in → workspace |
 | `src/Workspace.tsx` | Today / My Tasks / History tabs and all handlers |
-| `src/lib/brief/` | Analyses a pasted brief: `jsonFormat` (structured block), `ownershipFormat` (Section A/B/C report), `execFormat` (Executive Work Brief), `dailyFormat` (older Daily Work Brief) |
+| `src/lib/brief/` | Analyses a pasted brief: `jsonFormat` (structured block), `ownershipFormat` (Section A/B/C report), `priorityFormat` (Critical/High/Medium report), `execFormat` (Executive Work Brief), `dailyFormat` (older Daily Work Brief) |
+| `src/lib/prompt.ts` | Generic prompt template and the "add data section" helper |
 | `src/lib/db.ts` | All Supabase reads/writes (brief_* tables, Planner tasks via sync_push) |
 | `src/lib/planner.ts` | Planner bridge: username login, priority / due / notes mapping, push items |
 | `src/lib/supabase.ts` | Supabase client from `VITE_SUPABASE_*` env vars |
@@ -66,12 +75,13 @@ keeps one copy. **History → Clear all data** wipes briefs, dismissed items and
 ### How a brief is analysed
 
 Paste a brief into the **Paste brief** box on the Today tab — it's analysed as soon
-as it's pasted and saved to the `briefs` table. Three layouts are understood, tried in order:
+as it's pasted and saved to the `briefs` table. These layouts are understood, tried in order:
 
-1. **Structured JSON block** — most reliable. **Copy AI instructions** (on the paste
-   box) copies a section to append to your AI prompt; the AI then ends its report with
-   a JSON block listing every item once, with owner, urgency, risk, due date, Top-10 rank
-   and a suggested reply.
+1. **Structured JSON block** — most reliable. Either this app's schema (`items`, with
+   owner, urgency, waiting_on, category, why, risk, due date, Top rank, suggested reply)
+   or the simpler `work_items` one (priority P1–P4, category, subject, required_action,
+   status, due_date, source). The date and a "Top 5 Recommended Actions" list are taken
+   from the report text around the JSON when the JSON leaves them out.
 2. **Ownership report** — My actions (Section A), Team actions (B), Waiting on customer (C),
    Escalations, Aging items, Top 10 / Today priorities, Executive summary — with or without
    the "SECTION A/B/C" prefixes, in any letter case, with or without markdown. The brief's
@@ -82,11 +92,14 @@ as it's pasted and saved to the `briefs` table. Three layouts are understood, tr
    badge, owner from its Owner field) and *Completed / no longer my action* (→ Completed;
    offers "Mark done in Planner" when a Planner task is still open). Your name is read from
    the brief ("Required Action From …") to tell your Top-10 rows from colleagues'.
-3. **Executive Work Brief** — the earlier `=====`-divided report (Requires my response,
+3. **Priority report** — Critical / High / Medium / Other pending actions, Waiting on
+   customer, Decisions Support summary, support-ticket summary, meetings and a Top 5
+   list (used when the AI leaves out the JSON).
+4. **Executive Work Brief** — the earlier `=====`-divided report (Requires my response,
    Escalations, Open support incidents, UAT tracker, Customer follow-up, Risks, Top 10,
    Personal attention). Tables pasted as tab-separated text are reconstructed, and every
    mention of the same ticket (or the same thread, by subject keywords) is merged into one item.
-4. **Daily Work Brief** — the earlier emoji-section layout.
+5. **Daily Work Brief** — the earlier emoji-section layout.
 
 Items are grouped as:
 

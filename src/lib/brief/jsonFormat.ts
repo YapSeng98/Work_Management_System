@@ -1,5 +1,5 @@
 import { dueFromDate, dueFromText, hashId, rankItem, refsIn, sortItems, toPriority } from "./common";
-import type { BriefItem, ItemKind, Owner, ParsedBrief } from "./types";
+import type { BriefItem, ItemKind, Owner, ParsedBrief, Priority } from "./types";
 
 /**
  * Reader for the machine-readable block requested by AI_INSTRUCTIONS (see index.ts).
@@ -7,7 +7,7 @@ import type { BriefItem, ItemKind, Owner, ParsedBrief } from "./types";
  * mostly validates and ranks. Every field is treated as untrusted and coerced.
  */
 
-/** Finds the first balanced {...} that parses as JSON and has an "items" array. */
+/** Finds the first balanced {...} that parses as JSON and has an "items" (or "work_items") array. */
 export function extractBriefJson(text: string): Record<string, unknown> | null {
   for (let start = text.indexOf("{"); start !== -1; start = text.indexOf("{", start + 1)) {
     let depth = 0;
@@ -22,7 +22,8 @@ export function extractBriefJson(text: string): Record<string, unknown> | null {
       else if (c === "}" && --depth === 0) {
         try {
           const value = JSON.parse(text.slice(start, i + 1));
-          if (value && typeof value === "object" && Array.isArray((value as { items?: unknown }).items)) return value;
+          const v = value as { items?: unknown; work_items?: unknown } | null;
+          if (v && typeof v === "object" && (Array.isArray(v.items) || Array.isArray(v.work_items))) return value;
         } catch {
           // not JSON — keep scanning
         }
@@ -52,12 +53,33 @@ function ownerOf(waitingOn: string | undefined, type: string | undefined): { own
 
 const KINDS: ItemKind[] = ["reply", "action", "decision", "follow_up", "fyi"];
 
-export function parseJsonBrief(data: Record<string, unknown>): ParsedBrief {
+/** "P1".."P4", "Critical", "High", "Medium", "Normal", "Low" → our levels. */
+function priorityOf(v: unknown): Priority | undefined {
+  const s = str(v)?.toLowerCase() ?? "";
+  if (/^p1\b|critical|urgent/.test(s)) return "critical";
+  if (/^p2\b|high/.test(s)) return "high";
+  if (/^p3\b|medium/.test(s)) return "medium";
+  if (/^p4\b|normal|low/.test(s)) return "low";
+  return undefined;
+}
+
+/** Older / simpler schemas say "waiting on customer" in priority or category instead of waiting_on. */
+function waitingOnOf(x: Record<string, unknown>): string | undefined {
+  const explicit = str(x.waiting_on)?.toLowerCase();
+  if (explicit) return explicit;
+  const text = `${str(x.priority) ?? ""} ${str(x.category) ?? ""} ${str(x.status) ?? ""}`.toLowerCase();
+  if (/waiting on (customer|vendor|user)|awaiting customer/.test(text)) return "customer";
+  return undefined;
+}
+
+export function parseJsonBrief(data: Record<string, unknown>, fallbackDate?: Date): ParsedBrief {
   const day = isoDay(data.brief_date);
-  const date = day ? new Date(day + "T00:00:00") : undefined;
+  const date = day ? new Date(day + "T00:00:00") : fallbackDate;
   const ref = date ?? new Date();
 
-  const items: BriefItem[] = (data.items as unknown[])
+  // Supports this app's schema ("items") and the simpler "work_items" one.
+  const rawItems = (Array.isArray(data.items) ? data.items : data.work_items) as unknown[];
+  const items: BriefItem[] = rawItems
     .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
     .map((x) => {
       const title = str(x.title) ?? str(x.subject) ?? "Untitled item";
@@ -66,11 +88,13 @@ export function parseJsonBrief(data: Record<string, unknown>): ParsedBrief {
       const refs = [...new Set([...tickets, ...refsIn(`${title} ${str(x.subject) ?? ""}`)])];
       const type = str(x.type)?.toLowerCase();
       const kind: ItemKind = KINDS.includes(type as ItemKind) ? (type as ItemKind) : "action";
-      const { owner, reason } = ownerOf(str(x.waiting_on)?.toLowerCase(), type);
-      const priority = toPriority(x.urgency) ?? "medium";
-      const risk = toPriority(x.risk);
-      const dueDay = isoDay(x.due);
-      const due = dueDay ? dueFromDate(dueDay, ref) : dueFromText(str(x.due) ?? "");
+      const { owner, reason } = ownerOf(waitingOnOf(x), type);
+      const priority = toPriority(x.urgency) ?? priorityOf(x.priority) ?? "medium";
+      const risk = toPriority(x.risk); // a level; free text ("Risk if delayed") goes to the summary
+      const riskText = risk ? undefined : str(x.risk);
+      const dueRaw = x.due ?? x.due_date;
+      const dueDay = isoDay(dueRaw);
+      const due = dueDay ? dueFromDate(dueDay, ref) : dueFromText(str(dueRaw) ?? "");
       const rank = Number(x.top_rank);
       const topRank = x.top_rank != null && Number.isInteger(rank) && rank > 0 ? rank : undefined;
       const escalation = x.escalation === true || x.escalation === "true";
@@ -83,14 +107,19 @@ export function parseJsonBrief(data: Record<string, unknown>): ParsedBrief {
         title,
         from: str(x.from),
         customer: str(x.customer),
-        summary: str(x.subject) && str(x.subject) !== title ? str(x.subject) : undefined,
+        summary:
+          [str(x.subject) && str(x.subject) !== title ? str(x.subject) : undefined, str(x.why), riskText && `Risk if delayed: ${riskText}`]
+            .filter(Boolean)
+            .join(" — ") || undefined,
         status: str(x.status),
-        action: str(x.next_action),
+        action: str(x.next_action) ?? str(x.required_action),
+        category: str(x.category),
+        source: str(x.source),
         stage: str(x.stage),
         refs,
         owner,
         ownerReason: owner === "team" && str(x.owner) ? `Owned by ${str(x.owner)}` : reason,
-        ownerName: owner === "me" ? undefined : str(x.owner),
+        ownerName: owner === "me" || owner === "others" ? undefined : str(x.owner),
         suggestedReply: str(x.recommended_reply),
         canClose: x.can_close === true || undefined,
         topRank,
@@ -108,17 +137,21 @@ export function parseJsonBrief(data: Record<string, unknown>): ParsedBrief {
     .filter((m): m is Record<string, unknown> => !!m && typeof m === "object" && !!str(m.title))
     .map((m) => ({ id: hashId(`${str(m.when) ?? ""}${str(m.title)}`), when: str(m.when) ?? "", title: str(m.title)! }));
 
-  const counts = Object.entries((data.counts as Record<string, unknown>) ?? {})
+  // Counts come either as a "counts" object or as top-level "*_count" numbers.
+  const countEntries = data.counts
+    ? Object.entries(data.counts as Record<string, unknown>)
+    : Object.entries(data).filter(([k]) => k.endsWith("_count")).map(([k, v]) => [k.replace(/_count$/, ""), v] as const);
+  const counts = countEntries
     .filter(([, v]) => typeof v === "number")
     .map(([k, v]) => ({ label: k.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()).replace(/\buat\b/i, "UAT"), value: v as number }));
 
   return {
     format: "json",
-    title: date ? `Executive Work Brief – ${date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}` : "Executive Work Brief",
+    title: date ? `Daily Work Brief – ${date.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}` : "Daily Work Brief",
     date,
     items: sortItems(items),
     meetings,
     counts,
-    executiveSummary: str(data.bottom_line),
+    executiveSummary: str(data.bottom_line) ?? str(data.summary),
   };
 }
