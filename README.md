@@ -38,8 +38,8 @@ from any device. Until one is saved, the editor starts from a generic template w
 
 ### Data kept
 
-Whenever a new brief is saved, briefs older than 60 days, dismissed items older than
-90 days and history older than 180 days are deleted, and pasting the same brief twice
+Whenever a new brief is saved (and whenever the app opens), briefs older than 30 days,
+dismissed items older than 90 days and history older than 180 days are deleted, and pasting the same brief twice
 keeps one copy. **History → Clear all data** wipes briefs, dismissed items and history
 (and, if you confirm, the tasks Daily Brief created in the Planner).
 
@@ -125,5 +125,9 @@ task (priority from urgency, due date from the brief, details in its notes) and 
   neither took nor dismissed, and that today's brief no longer mentions (by ticket, id or
   title) are listed under *Pending you* with the date they came from. Only an item's most
   recent mention counts, so anything a newer brief completed or reassigned is not carried.
+- **Archive tab** — every earlier item (mine, the team's or waiting on others) that today's
+  brief no longer mentions, grouped by brief date with "Deletes in N days", searchable and
+  filterable by owner. Any of them can be taken into the Planner. Briefs — and so their
+  archived items — are deleted after 30 days.
 - **History tab** — stats for the last 7 days, every past brief (click **View** to
   reopen it on Today) and the full activity log, all read from the database.

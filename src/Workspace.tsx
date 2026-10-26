@@ -7,13 +7,14 @@ import { BriefImportCard } from "./components/BriefImportCard";
 import { BriefView } from "./components/BriefView";
 import { MyTasksView } from "./components/MyTasksView";
 import { PromptPanel } from "./components/PromptPanel";
+import { ArchiveView } from "./components/ArchiveView";
 import type { ItemStatus } from "./components/BriefItemRow";
 import { XIcon } from "./components/icons";
 
 import { parseBrief, type BriefItem, type ParsedBrief } from "./lib/brief";
 import * as db from "./lib/db";
 import { taskIdFor, type TakeEdit } from "./lib/planner";
-import { carriedOver } from "./lib/carryOver";
+import { archivedItems, carriedOver } from "./lib/carryOver";
 import type { HistoryAction, HistoryEntry, MyTask, Quadrant, Tab } from "./types";
 
 /** Parse pasted brief text; null if it contains nothing recognisable. */
@@ -73,6 +74,7 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
       });
     (async () => {
       setStoreMode(await db.detectStore());
+      void db.pruneOld().catch(() => {}); // housekeeping: the 30-day archive limit also applies when nobody pastes
       const [b, t, d, h, p] = await Promise.all([db.fetchBriefs(), db.fetchTasks(), db.fetchDismissed(), db.fetchHistory(), db.fetchPrompt()]);
       if (cancelled) return;
       setPrompt(p);
@@ -134,10 +136,13 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
     return earliest && earliest < current.briefDate ? shortDate(earliest) : undefined;
   }
 
+  const snapshots = briefs.map((b) => ({ briefDate: b.briefDate, title: b.title, items: parsed.get(b.id)?.items ?? [] }));
+  const archived = archivedItems(snapshots, db.KEEP_DAYS.briefs);
+
   // Items from earlier briefs that slipped out of today's — only on the latest brief.
   const carried =
     current && current.id === briefs[0]?.id
-      ? carriedOver(briefs.map((b) => ({ briefDate: b.briefDate, title: b.title, items: parsed.get(b.id)?.items ?? [] }))).filter(
+      ? carriedOver(snapshots).filter(
           (c) => !dismissed.has(c.item.id) && statusOf(c.item) === "new",
         )
       : [];
@@ -320,6 +325,15 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
               setTab("today");
             }}
             onClearAll={handleClearAll}
+          />
+        ) : tab === "archive" ? (
+          <ArchiveView
+            archived={archived}
+            keepDays={db.KEEP_DAYS.briefs}
+            dismissed={dismissed}
+            statusOf={statusOf}
+            sinceOf={sinceOf}
+            onTake={handleTake}
           />
         ) : tab === "tasks" ? (
           <MyTasksView tasks={tasks} onToggleDone={handleToggleDone} onRemove={handleRemoveTask} />

@@ -139,14 +139,19 @@ export async function fetchBriefs(limit = 60): Promise<StoredBrief[]> {
 }
 
 /** How long stored data is kept; older rows are removed whenever a new brief is saved. */
-const KEEP_DAYS = { briefs: 60, dismissed: 90, history: 180 };
+export const KEEP_DAYS = { briefs: 30, dismissed: 90, history: 180 }; // briefs = the Archive's 30 days
 
 function daysAgo(n: number) {
   return new Date(Date.now() - n * 86_400_000).toISOString();
 }
 
-/** Drop data past its keep period so the tables don't grow forever. */
-async function pruneOld() {
+/** Drop data past its keep period so the tables don't grow forever. Runs on paste and on open. */
+export async function pruneOld() {
+  if (mode === "local") {
+    const cutoff = daysAgo(KEEP_DAYS.briefs);
+    writeLocal("briefs", readLocal<StoredBrief[]>("briefs", []).filter((b) => b.createdAt >= cutoff));
+    return;
+  }
   await Promise.all([
     db().from("brief_reports").delete().lt("created_at", daysAgo(KEEP_DAYS.briefs)),
     db().from("brief_dismissed").delete().lt("created_at", daysAgo(KEEP_DAYS.dismissed)),
@@ -166,7 +171,7 @@ export async function insertBrief(rawText: string, title: string, briefDate?: Da
       rawText,
       createdAt: now.toISOString(),
     };
-    writeLocal("briefs", [brief, ...existing].slice(0, 60));
+    writeLocal("briefs", [brief, ...existing].filter((b) => b.createdAt >= daysAgo(KEEP_DAYS.briefs)).slice(0, 60));
     return brief;
   }
   const latest = check(

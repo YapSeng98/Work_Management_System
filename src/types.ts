@@ -1,6 +1,6 @@
 export type Quadrant = "do" | "schedule" | "delegate" | "later";
 
-export type Tab = "today" | "tasks" | "history";
+export type Tab = "today" | "tasks" | "archive" | "history";
 
 export interface Meeting {
   id: string;

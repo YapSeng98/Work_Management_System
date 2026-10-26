@@ -229,6 +229,10 @@ code {
   }
   .topbar .tab {
     flex: 1;
+    padding-left: 6px;
+    padding-right: 6px;
+    font-size: 13.5px;
+    white-space: nowrap;
   }
   .section-title {
     flex-wrap: wrap;

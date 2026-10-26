@@ -19,6 +19,7 @@ export function Header({
   const tabs: { id: Tab; label: string }[] = [
     { id: "today", label: "Today" },
     { id: "tasks", label: taskCount ? `My Tasks · ${taskCount}` : "My Tasks" },
+    { id: "archive", label: "Archive" },
     { id: "history", label: "History" },
   ];
 
