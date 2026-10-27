@@ -1,9 +1,21 @@
 import { supabase } from "./supabase";
 import { isoDate, localTime } from "./dates";
 import { clearLocal, readLocal, writeLocal } from "./storage";
-import { NOTES_MARKER, parseNotes, plannerDue, plannerNotes, plannerPriority, taskIdFor, taskPush, type PushItem, type TakeEdit } from "./planner";
+import {
+  NOTES_MARKER,
+  footerWithQuadrant,
+  parseNotes,
+  plannerDue,
+  plannerNotes,
+  plannerPriority,
+  splitNotes,
+  taskIdFor,
+  taskPush,
+  type PushItem,
+  type TakeEdit,
+} from "./planner";
 import type { BriefItem } from "./brief";
-import type { HistoryAction, HistoryEntry, MyTask, Quadrant } from "../types";
+import type { HistoryAction, HistoryEntry, MyTask, Quadrant, TaskEdit } from "../types";
 
 /**
  * All reads and writes go through here.
@@ -104,6 +116,9 @@ function toTask(t: PlannerTaskRow): MyTask {
     closedOn: done ? isoDate(new Date(t.updated_at)) : undefined,
     score: (6 - t.priority) * 10 + (due === "Overdue" || due === "Today" ? 15 : 0),
     rev: t.rev,
+    notes: t.notes ?? "",
+    dueIso: t.due ?? undefined,
+    priority: t.priority,
   };
 }
 
@@ -232,6 +247,35 @@ export async function insertTask(item: BriefItem, userId: string, briefTitle?: s
     ),
   ]);
   return toTask({ id, title, notes, state: "open", priority, due: due ?? null, rev: result.rev ?? null, updated_at: new Date().toISOString() });
+}
+
+/**
+ * Save "Edit" from My Tasks to the Planner. Only fields that changed are pushed, so an edit
+ * made meanwhile on another device to a different field is kept. The "— Daily Brief" footer
+ * is always kept (with the chosen group), so the task stays linked.
+ */
+export async function updateTask(task: MyTask, edit: TaskEdit): Promise<MyTask> {
+  const { footer } = splitNotes(task.notes);
+  // A "— Daily Brief" line typed into the body is dropped: the task keeps exactly one footer.
+  const body = splitNotes(edit.body).body;
+  const notes = [body, footerWithQuadrant(footer || `${NOTES_MARKER} Do`, edit.quadrant)].filter(Boolean).join("\n");
+  const patch: Record<string, unknown> = {};
+  if (edit.title.trim() && edit.title.trim() !== task.title) patch.title = edit.title.trim();
+  if ((edit.dueIso || "") !== (task.dueIso ?? "")) patch.due = edit.dueIso || "";
+  if (edit.priority !== task.priority) patch.priority = edit.priority;
+  if (notes !== task.notes) patch.notes = notes;
+  if (!Object.keys(patch).length) return task;
+  const result = await syncPush([taskPush(task.id, patch, task.rev)]);
+  return toTask({
+    id: task.id,
+    title: (patch.title as string) ?? task.title,
+    notes,
+    state: task.done ? "done" : "open",
+    priority: edit.priority,
+    due: edit.dueIso || null,
+    rev: result.rev ?? task.rev,
+    updated_at: new Date().toISOString(),
+  });
 }
 
 export async function setTaskDone(task: MyTask, done: boolean): Promise<number | null> {

@@ -1,8 +1,9 @@
 import { quadrantLabel, quadrantOrder, quadrantStyle } from "../quadrant";
-import type { MyTask, Quadrant } from "../types";
+import { useState } from "react";
+import type { MyTask, Quadrant, TaskEdit } from "../types";
 import { Card, SectionHeader } from "./Card";
-import { ArrowRightIcon, CheckIcon, ListChecksIcon, XIcon } from "./icons";
-import { PLANNER_URL } from "../lib/planner";
+import { ArrowRightIcon, CheckIcon, ListChecksIcon, PencilIcon, XIcon } from "./icons";
+import { PLANNER_URL, splitNotes } from "../lib/planner";
 import { isoDate } from "../lib/dates";
 import { normTitle } from "../lib/brief";
 
@@ -31,10 +32,12 @@ export function MyTasksView({
   tasks,
   onToggleDone,
   onRemove,
+  onEdit,
 }: {
   tasks: MyTask[];
   onToggleDone: (task: MyTask) => void;
   onRemove: (task: MyTask) => void;
+  onEdit: (task: MyTask, edit: TaskEdit) => Promise<void>;
 }) {
   const open = tasks.filter((t) => !t.done);
   // Open tasks that share a ticket or subject with an earlier-listed one: likely duplicates.
@@ -73,7 +76,7 @@ export function MyTasksView({
               hint={quadrantHint[q]}
               count={list.length}
             />
-            <TaskList tasks={list} onToggleDone={onToggleDone} onRemove={onRemove} dupes={dupes} />
+            <TaskList tasks={list} onToggleDone={onToggleDone} onRemove={onRemove} onEdit={onEdit} dupes={dupes} />
           </Card>
         );
       })}
@@ -83,7 +86,7 @@ export function MyTasksView({
       {done.length > 0 && (
         <Card>
           <SectionHeader icon={<CheckIcon size={14} />} label="Closed today" hint="Done here or in your Planner" count={done.length} />
-          <TaskList tasks={done} onToggleDone={onToggleDone} onRemove={onRemove} />
+          <TaskList tasks={done} onToggleDone={onToggleDone} onRemove={onRemove} onEdit={onEdit} />
         </Card>
       )}
     </>
@@ -94,17 +97,20 @@ function TaskList({
   tasks,
   onToggleDone,
   onRemove,
+  onEdit,
   dupes,
 }: {
   tasks: MyTask[];
   onToggleDone: (task: MyTask) => void;
   onRemove: (task: MyTask) => void;
+  onEdit: (task: MyTask, edit: TaskEdit) => Promise<void>;
   dupes?: Set<string>;
 }) {
+  const [editing, setEditing] = useState<string | null>(null);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2, margin: "0 -10px" }}>
       {tasks.map((t) => (
-        <div key={t.id} className="item" style={{ flexWrap: "nowrap", gap: 12, padding: "11px 12px" }}>
+        <div key={t.id} className="item" style={{ flexWrap: "wrap", gap: 12, padding: "11px 12px" }}>
           <button
             className="task-check"
             onClick={() => onToggleDone(t)}
@@ -127,7 +133,7 @@ function TaskList({
           >
             {t.done && <CheckIcon size={12} color="#fff" />}
           </button>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: "1 1 200px", minWidth: 0 }}>
             <div
               style={{
                 fontSize: 14.5,
@@ -164,11 +170,107 @@ function TaskList({
               ))}
             </div>
           </div>
-          <button className="btn btn-icon" onClick={() => onRemove(t)} title="Delete from Planner" aria-label="Delete from Planner" style={{ width: 28, height: 28 }}>
-            <XIcon size={12} />
-          </button>
+          <div style={{ display: "flex", gap: 4, flex: "none" }}>
+            <button className="btn btn-icon" onClick={() => setEditing(editing === t.id ? null : t.id)} title="Edit" aria-label="Edit task" style={{ width: 28, height: 28 }}>
+              <PencilIcon size={12} />
+            </button>
+            <button className="btn btn-icon" onClick={() => onRemove(t)} title="Delete from Planner" aria-label="Delete from Planner" style={{ width: 28, height: 28 }}>
+              <XIcon size={12} />
+            </button>
+          </div>
+          {editing === t.id && (
+            <TaskEditor
+              task={t}
+              onCancel={() => setEditing(null)}
+              onSave={async (edit) => {
+                await onEdit(t, edit);
+                setEditing(null);
+              }}
+            />
+          )}
         </div>
       ))}
     </div>
+  );
+}
+
+const PLANNER_PRIORITIES = [
+  { value: 1, label: "Critical" },
+  { value: 2, label: "High" },
+  { value: 3, label: "Medium" },
+  { value: 4, label: "Low" },
+  { value: 5, label: "Optional" },
+];
+
+/** Edit a Planner task in place: title, due date, priority, group and notes. */
+function TaskEditor({ task, onSave, onCancel }: { task: MyTask; onSave: (edit: TaskEdit) => Promise<void>; onCancel: () => void }) {
+  const [title, setTitle] = useState(task.title);
+  const [dueIso, setDueIso] = useState(task.dueIso ?? "");
+  const [priority, setPriority] = useState(task.priority);
+  const [quadrant, setQuadrant] = useState<Quadrant>(task.quadrant);
+  const [body, setBody] = useState(splitNotes(task.notes).body);
+  const [busy, setBusy] = useState(false);
+  const label = { fontSize: 12, fontWeight: 600, color: "var(--text-muted)" } as const;
+
+  return (
+    <form
+      className="reply"
+      style={{ flex: "1 1 100%", flexDirection: "column", alignItems: "stretch", gap: 12, padding: 14 }}
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        try {
+          await onSave({ title, dueIso, priority, quadrant, body });
+        } catch {
+          // the error banner explains; keep the form so nothing typed is lost
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--accent)" }}>Edit task — saved to your Planner</div>
+      <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        <span style={label}>Title</span>
+        <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus />
+      </label>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+        <label style={{ display: "flex", flexDirection: "column", gap: 5, flex: "1 1 140px" }}>
+          <span style={label}>Due date</span>
+          <input className="input" type="date" value={dueIso} onChange={(e) => setDueIso(e.target.value)} />
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 5, flex: "1 1 140px" }}>
+          <span style={label}>Priority</span>
+          <select className="input" value={priority} onChange={(e) => setPriority(Number(e.target.value))}>
+            {PLANNER_PRIORITIES.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label style={{ display: "flex", flexDirection: "column", gap: 5, flex: "1 1 140px" }}>
+          <span style={label}>Group</span>
+          <select className="input" value={quadrant} onChange={(e) => setQuadrant(e.target.value as Quadrant)}>
+            {quadrantOrder.map((q) => (
+              <option key={q} value={q}>
+                {quadrantLabel[q]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        <span style={label}>Notes</span>
+        <textarea className="input" value={body} onChange={(e) => setBody(e.target.value)} rows={Math.min(10, Math.max(3, body.split("\n").length + 1))} style={{ resize: "vertical", lineHeight: 1.5 }} />
+      </label>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <button type="button" className="btn" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="submit" className="btn btn-primary" disabled={busy || !title.trim()}>
+          {busy ? "Saving…" : "Save"}
+        </button>
+      </div>
+    </form>
   );
 }

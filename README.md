@@ -55,6 +55,10 @@ keeps one copy. **History → Clear all data** wipes briefs, dismissed items and
   the Planner uses it to badge these tasks. My Tasks lists Planner tasks carrying it, so
   titles, due dates and done state edited in the Planner show up here, and tasks ticked
   done anywhere close automatically ("Closed today").
+- **Edit in My Tasks** (✏️): title, due date, priority, group and notes. Only the fields
+  that changed are pushed (`sync_push` with `base_rev`), and the "— Daily Brief" footer is
+  always kept exactly once (a footer typed into the notes is dropped). Deleting a task
+  soft-deletes it in the Planner and its item becomes takeable again on Today / Archive.
 - Live updates: Realtime on the `brief_*` tables plus the Planner's `sync_signals`
   (bumped on every task change from any device).
 

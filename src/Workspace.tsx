@@ -15,7 +15,7 @@ import { normTitle, parseBrief, type BriefItem, type ParsedBrief } from "./lib/b
 import * as db from "./lib/db";
 import { taskIdFor, type TakeEdit } from "./lib/planner";
 import { archivedItems, carriedOver } from "./lib/carryOver";
-import type { HistoryAction, HistoryEntry, MyTask, Quadrant, Tab } from "./types";
+import type { HistoryAction, HistoryEntry, MyTask, Quadrant, Tab, TaskEdit } from "./types";
 
 /** Parse pasted brief text; null if it contains nothing recognisable. */
 function analyse(text: string): ParsedBrief | null {
@@ -276,8 +276,24 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
     });
   }
 
+  async function handleEditTask(task: MyTask, edit: TaskEdit) {
+    setError(null);
+    try {
+      const updated = await db.updateTask(task, edit);
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
+    } catch (err) {
+      setError(`Couldn't save the task: ${message(err)}`);
+      throw err; // keeps the editor open
+    }
+  }
+
   function handleRemoveTask(task: MyTask) {
-    if (!window.confirm(`Delete "${task.title}" from your Planner too?`)) return;
+    if (
+      !window.confirm(
+        `Delete "${task.title}" from your Planner?\n\nIt goes back to Today (or the Archive, if it's from an older brief) so you can take it again later.`,
+      )
+    )
+      return;
     void run(async () => {
       await db.deleteTask(task);
       setTasks((prev) => prev.filter((t) => t.id !== task.id));
@@ -348,7 +364,7 @@ export function Workspace({ userId, email, onSignOut }: { userId: string; email:
             onTake={handleTake}
           />
         ) : tab === "tasks" ? (
-          <MyTasksView tasks={tasks} onToggleDone={handleToggleDone} onRemove={handleRemoveTask} />
+          <MyTasksView tasks={tasks} onToggleDone={handleToggleDone} onRemove={handleRemoveTask} onEdit={handleEditTask} />
         ) : (
           <>
             {current && current.id !== briefs[0]?.id && (

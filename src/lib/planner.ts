@@ -94,6 +94,20 @@ export interface TakeEdit {
   priority: Priority;
 }
 
+/** Split stored notes into the editable body and the "— Daily Brief" footer line. */
+export function splitNotes(notes: string): { body: string; footer: string } {
+  const lines = notes.split("\n");
+  const footers = lines.filter((l) => l.startsWith(NOTES_MARKER));
+  // the last footer is the real one (the app always writes it last); any others are dropped
+  return { body: lines.filter((l) => !l.startsWith(NOTES_MARKER)).join("\n").trim(), footer: footers.at(-1) ?? "" };
+}
+
+/** The footer with its group (Do / Schedule / …) swapped; the rest of the line is kept. */
+export function footerWithQuadrant(footer: string, quadrant: Quadrant): string {
+  const rest = footer.startsWith(NOTES_MARKER) ? footer.slice(NOTES_MARKER.length).trim().split(" · ").slice(1) : [];
+  return [`${NOTES_MARKER} ${quadrantLabel[quadrant]}`, ...rest].join(" · ");
+}
+
 /** Reads back what plannerNotes wrote (tolerant of edits made in the Planner). */
 export function parseNotes(notes: string | null) {
   const lines = (notes ?? "").split("\n");

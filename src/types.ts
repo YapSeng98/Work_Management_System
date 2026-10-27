@@ -32,4 +32,16 @@ export interface MyTask {
   closedOn?: string; // local ISO date it was last changed, when done — "Closed today"
   score: number; // higher sorts first (from Planner priority and due date)
   rev: number | null; // Planner row revision, sent as base_rev on updates
+  notes: string; // full Planner notes, footer included
+  dueIso?: string; // YYYY-MM-DD
+  priority: number; // Planner priority: 1 critical … 5 optional
+}
+
+/** What "Edit" in My Tasks can change on a Planner task. */
+export interface TaskEdit {
+  title: string;
+  dueIso: string; // "" = no due date
+  priority: number;
+  quadrant: Quadrant;
+  body: string; // notes without the "— Daily Brief" footer line
 }

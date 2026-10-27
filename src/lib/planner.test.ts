@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NOTES_MARKER, parseNotes, plannerDue, plannerNotes, plannerNotesBody, plannerPriority, shadowEmail, taskIdFor, taskPush } from "./planner";
+import { NOTES_MARKER, footerWithQuadrant, parseNotes, plannerDue, plannerNotes, plannerNotesBody, plannerPriority, shadowEmail, splitNotes, taskIdFor, taskPush } from "./planner";
 import { parseBrief } from "./brief";
 import ownership from "./brief/fixtures/ownership.txt?raw";
 
@@ -19,6 +19,16 @@ describe("Planner bridge", () => {
     expect(plannerNotes(item, "B", "   ")).toBe("— Daily Brief · Do · B");
     expect(plannerNotesBody(item)).toContain("Suggested reply: Share the root cause");
     expect(plannerNotesBody(item)).not.toContain(NOTES_MARKER);
+  });
+
+  it("splits notes into body and footer, and swaps only the group in the footer", () => {
+    const { body, footer } = splitNotes("Next: do it\nTickets: INC1\n— Daily Brief · Do · Brief 26 Oct");
+    expect(body).toBe("Next: do it\nTickets: INC1");
+    expect(footer).toBe("— Daily Brief · Do · Brief 26 Oct");
+    expect(footerWithQuadrant(footer, "schedule")).toBe("— Daily Brief · Schedule · Brief 26 Oct");
+    expect(footerWithQuadrant("— Daily Brief · Later", "do")).toBe("— Daily Brief · Do");
+    expect(splitNotes("no footer here")).toEqual({ body: "no footer here", footer: "" });
+    expect(splitNotes("typed\n— Daily Brief · Later · typed\n— Daily Brief · Do · real")).toEqual({ body: "typed", footer: "— Daily Brief · Do · real" });
   });
 
   it("reads back what it writes", () => {
