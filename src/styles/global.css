@@ -259,6 +259,8 @@ code {
   gap: 12px;
 }
 .section-title__label {
+  flex: 1 1 0;
+  min-width: 0; /* shrink so a count badge stays on the title line */
   display: flex;
   align-items: center;
   gap: 10px;
@@ -283,6 +285,7 @@ code {
   box-shadow: var(--ai-glow);
 }
 .count {
+  flex: none;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);

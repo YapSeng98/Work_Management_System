@@ -33,6 +33,11 @@ export interface BriefItem {
   completed?: boolean; // listed as completed / no longer my action
   category?: string; // e.g. "RCA", "Deployment", "Decisions Support"
   source?: string; // e.g. "Support folder", "Inbox"
+  possible?: boolean; // "possible action": ownership unclear, verify before acting
+  recipientType?: "to" | "cc";
+  lastReceived?: string; // when the latest email in the thread arrived (as given)
+  ageHours?: number; // age of the latest email
+  replyRequired?: boolean; // listed under "Emails requiring my reply"
   topRank?: number;
   due: string; // "Today", "Tomorrow", "This week", "Overdue", a short date, or ""
   dueDate?: string; // exact ISO date when the source gives one (JSON block)

@@ -79,20 +79,19 @@ export const AI_INSTRUCTIONS = `================================================
 MACHINE-READABLE JSON (for my Daily Brief app)
 ==================================================
 
-End the report with ONE \`\`\`json code block containing every work item from the report EXACTLY ONCE (merge mentions of the same ticket or email thread). Use exactly this structure:
+Generate ONE AND ONLY ONE \`\`\`json code block. Every work item from the report must appear EXACTLY ONCE (merge mentions of the same ticket, incident, email conversation or meeting topic). Use exactly this structure:
 
 {
   "brief_date": "YYYY-MM-DD",
-  "bottom_line": "1-2 sentences: what matters most today",
-  "counts": { "critical": 0, "high": 0, "medium": 0, "normal": 0, "waiting_on_customer": 0 },
+  "bottom_line": "What is most urgent today, and what could become a customer escalation if delayed",
+  "counts": { "critical": 0, "high": 0, "medium": 0, "normal": 0, "waiting_on_customer": 0, "waiting_on_team": 0 },
   "items": [
     {
       "title": "Short task title starting with a verb",
-      "subject": "Original email subject",
+      "subject": "Original email subject, exactly as in Outlook",
       "tickets": ["INC0000000"],
-      "category": "Production incident | RCA | Deployment | UAT | Commitment | Decisions Support | Support ticket | Meeting action | Other",
+      "category": "Production incident | RCA | Deployment | UAT | Commitment | Go-Live | Decisions Support | Support ticket | Meeting action | Other",
       "customer": "Customer / system",
-      "from": "Person who last wrote / is waiting",
       "owner": "Person who owns the next action",
       "waiting_on": "me | my_team | customer | third_party | none",
       "type": "reply | action | decision | follow_up | fyi",
@@ -105,13 +104,20 @@ End the report with ONE \`\`\`json code block containing every work item from th
       "risk": "Risk if delayed, in one line",
       "escalation": false,
       "top_rank": 1,
-      "source": "Inbox | Support folder | Decisions Support folder | Flagged | Meeting"
+      "email_subject": "Latest email subject in the thread",
+      "last_sender": "Name of the last sender",
+      "last_received": "YYYY-MM-DDTHH:MM",
+      "folder": "Source folder",
+      "recipient_type": "to | cc",
+      "email_age_hours": 0,
+      "reply_required": true,
+      "action_confidence": "confirmed | possible"
     }
   ],
   "meetings": [ { "when": "YYYY-MM-DD HH:MM", "title": "Meeting title" } ]
 }
 
-Rules: "urgency" maps P1 → critical, P2 → high, P3 → medium, P4 → low. "waiting_on" is "me" ONLY when a reply, decision or next action is explicitly expected from me (being in CC or in the thread is not enough); "my_team" when a colleague owns it; "customer" or "third_party" when we are waiting on them; "none" for FYI. "top_rank" is the item's position in the Top 5 list, else null. Use null for unknown values. Output valid JSON only inside the code block.`;
+Rules: "urgency" maps P1 → critical, P2 → high, P3 → medium, P4 → low. "waiting_on" is "me" ONLY when an explicit action is required from me (being in CC, attending a meeting or being mentioned is not enough); "my_team" when a colleague owns the next action; "customer" when customer confirmation is pending; "third_party" when vendor action is pending; "none" for FYI. "action_confidence" is "possible" when ownership is unclear. "top_rank" is 1-5 only for the Top 5 items, else null. All dates in ISO format. Use null if unknown. Output valid JSON only inside the code block.`;
 
 /**
  * Read a "Top 5 Recommended Actions" (or "Top N Priorities") numbered list from the

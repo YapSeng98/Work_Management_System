@@ -1,0 +1,147 @@
+# Daily Work Brief – 30 Oct 2026
+
+All names, tickets and emails in this file are made up.
+
+## Executive Summary
+
+| Priority | Count | Description |
+|---|---:|---|
+| 🚨 Critical | 1 | Incidents / Escalations |
+| 🔴 High | 1 | RCA / Deployments / UAT / Commitments |
+| 🟠 Medium | 0 | Support Tickets / Project Actions |
+| 🟡 Normal | 0 | Other Actions |
+| 🟢 Waiting On Customer | 1 | Monitoring |
+| 🔵 Waiting On Team | 1 | Monitoring |
+
+--------------------------------------------------
+
+## Emails Requiring My Reply
+
+| Age | Subject | Last Sender | Folder | Why Reply Needed | Suggested Action |
+|------|----------|------------|----------|-----------------|-----------------|
+| 5h | RE: INC0011111 Payroll export failing | Priya Nair | Support folder | Customer asked for an ETA | Send ETA for the hotfix |
+| 2d | Release 4.2 cut-over plan | Omar Haddad | Inbox | Approval requested | Approve or comment on the plan |
+
+--------------------------------------------------
+
+## 🚨 Critical Actions
+
+### 1. Payroll export outage
+
+Action Confidence: Confirmed
+Email Subject: RE: INC0011111 Payroll export failing
+Ticket/Incident: INC0011111
+Last Sender: Priya Nair
+Last Received: 2026-10-30 07:40
+Source Folder: Support folder
+Recipient Type: TO
+Customer/System: Acme Health / Payroll
+Latest Status: Third failure overnight; customer escalated.
+Why It Needs My Action: I own the payroll interface fix.
+Required Action: Deploy the hotfix and send the ETA.
+Suggested Reply: Hotfix is ready; deploying at 11:00, confirmation by 12:00.
+Due Date: Today
+Risk If Delayed: Payroll for 3,000 staff is delayed.
+
+--------------------------------------------------
+
+## 🔴 High Priority Actions
+
+### 2. Approve release 4.2 cut-over plan
+
+Action Confidence: Confirmed
+Email Subject: Release 4.2 cut-over plan
+Ticket/Incident: n/a
+Last Sender: Omar Haddad
+Last Received: 2026-10-28 16:05
+Source Folder: Inbox
+Recipient Type: TO
+Customer/System: Globex
+Latest Status: Plan circulated for approval.
+Why It Needs My Action: My approval is requested.
+Required Action: Approve or comment.
+Suggested Reply: Approved, with one change to the rollback window.
+Due Date: 2026-10-31
+Risk If Delayed: Go-live slips a week.
+
+--------------------------------------------------
+
+## Possible Actions Requiring Verification
+
+### Vendor licence renewal
+
+Action Confidence: Possible
+Email Subject: FW: Licence renewal reminder
+Last Sender: Vendor Desk
+Source Folder: Inbox
+Recipient Type: CC
+Why It Needs My Action: I am copied; owner unclear.
+Required Action: Confirm who owns the renewal.
+
+--------------------------------------------------
+
+## 🟢 Waiting On Customer
+
+Subject: INC0055555: Data correction batch
+Customer: Acme Health
+Last Update: Fix delivered 28 Oct.
+Current Status: Waiting for customer confirmation.
+Waiting On: Customer
+Expected Next Event: Confirmation by Monday.
+
+--------------------------------------------------
+
+## 🔵 Waiting On Team
+
+Subject: INC0077777: Login errors for Globex users
+Current Owner: Alex Lim
+Last Update: Investigation started 29 Oct.
+Waiting For: Root cause from Alex
+Expected Next Event: Findings by Friday.
+
+--------------------------------------------------
+
+## Meetings & Approvals Requiring My Attention Today
+
+Meeting Title: Release 4.2 go/no-go
+Time: 10:00 AM
+Required Preparation: Bring the cut-over checklist.
+Required Decision: Go / no-go.
+
+Meeting Title: Payroll incident review
+Time: 2:30 PM
+Required Follow-up: Send the RCA outline.
+
+--------------------------------------------------
+
+## Top 5 Recommended Actions For Today
+
+1. Deploy the payroll hotfix (INC0011111)
+   - Reason for ranking: Production incident with escalation.
+   - Estimated business impact: Payroll for 3,000 staff.
+   - What happens if ignored: Customer escalation to management.
+2. Approve the release 4.2 cut-over plan
+   - Reason for ranking: Go-live dependency.
+
+==================================================
+MACHINE-READABLE JSON
+==================================================
+
+```json
+{
+  "brief_date": "2026-10-30",
+  "bottom_line": "Deploy the payroll hotfix first; the cut-over approval could become an escalation if it slips.",
+  "counts": { "critical": 1, "high": 1, "medium": 0, "normal": 0, "waiting_on_customer": 1, "waiting_on_team": 1 },
+  "items": [
+    { "title": "Deploy payroll hotfix and send ETA", "subject": "RE: INC0011111 Payroll export failing", "tickets": ["INC0011111"], "category": "Production incident", "customer": "Acme Health", "from": "Priya Nair", "owner": "Jane Tan", "waiting_on": "me", "type": "action", "status": "Customer escalated", "why": "I own the payroll interface fix.", "next_action": "Deploy the hotfix and send the ETA.", "recommended_reply": "Hotfix is ready; deploying at 11:00.", "due": "2026-10-30", "urgency": "critical", "risk": "Payroll delayed", "escalation": true, "top_rank": 1, "source": "Support folder",
+      "email_subject": "RE: INC0011111 Payroll export failing", "last_sender": "Priya Nair", "last_received": "2026-10-30T07:40:00", "folder": "Support folder", "recipient_type": "to", "email_age_hours": 5, "reply_required": true, "action_confidence": "confirmed" },
+    { "title": "Approve release 4.2 cut-over plan", "subject": "Release 4.2 cut-over plan", "tickets": [], "category": "Go-Live", "customer": "Globex", "waiting_on": "me", "urgency": "high", "top_rank": 2,
+      "email_subject": "Release 4.2 cut-over plan", "last_sender": "Omar Haddad", "last_received": "2026-10-28T16:05:00", "folder": "Inbox", "recipient_type": "to", "email_age_hours": 46, "reply_required": true, "action_confidence": "confirmed" },
+    { "title": "Confirm who owns the licence renewal", "waiting_on": "me", "urgency": "low",
+      "email_subject": "FW: Licence renewal reminder", "last_sender": "Vendor Desk", "folder": "Inbox", "recipient_type": "cc", "email_age_hours": 30, "reply_required": false, "action_confidence": "possible" },
+    { "title": "Data correction confirmation", "subject": "INC0055555: Data correction batch", "tickets": ["INC0055555"], "waiting_on": "customer", "urgency": "low", "action_confidence": "confirmed" },
+    { "title": "Root cause for Globex login errors", "subject": "INC0077777: Login errors for Globex users", "tickets": ["INC0077777"], "owner": "Alex Lim", "waiting_on": "my_team", "urgency": "medium", "action_confidence": "confirmed" }
+  ],
+  "meetings": [ { "when": "2026-10-30 10:00", "title": "Release 4.2 go/no-go" } ]
+}
+```

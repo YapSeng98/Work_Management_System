@@ -224,6 +224,11 @@ export interface Acc {
   engagement?: boolean;
   completed?: boolean;
   subject?: string;
+  possible?: boolean;
+  recipientType?: "to" | "cc";
+  lastReceived?: string;
+  replyRequired?: boolean;
+  source?: string;
 }
 
 export interface Mention {
@@ -255,6 +260,11 @@ export interface Mention {
   engagement?: boolean;
   completed?: boolean;
   subject?: string;
+  possible?: boolean;
+  recipientType?: "to" | "cc";
+  lastReceived?: string;
+  replyRequired?: boolean;
+  source?: string;
 }
 
 export class Merger {
@@ -333,6 +343,12 @@ export class Merger {
     acc.engagement ||= m.engagement;
     acc.completed ||= m.completed;
     acc.subject ??= m.subject;
+    acc.recipientType ??= m.recipientType;
+    acc.lastReceived ??= m.lastReceived;
+    acc.source ??= m.source;
+    acc.replyRequired ||= m.replyRequired;
+    // "possible" only sticks if no mention calls it a confirmed action
+    if (m.possible !== undefined && !m.passing) acc.possible = acc.possible === false ? false : m.possible;
     return acc;
   }
 }

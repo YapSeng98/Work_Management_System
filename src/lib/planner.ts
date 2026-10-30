@@ -65,6 +65,10 @@ export function plannerNotesBody(item: BriefItem): string {
     item.category && `Category: ${item.category}`,
     item.suggestedReply && `Suggested reply: ${item.suggestedReply}`,
     item.ownerName && `Owner: ${item.ownerName}`,
+    item.subject && item.subject !== item.title && `Email: ${item.subject}`,
+    [item.source && `Folder: ${item.source}`, item.lastReceived && `Received: ${item.lastReceived.replace("T", " ").slice(0, 16)}`]
+      .filter(Boolean)
+      .join(" · ") || undefined,
     [item.from && `From: ${item.from}`, item.customer && `Customer: ${item.customer}`].filter(Boolean).join(" · ") || undefined,
   ]
     .filter(Boolean)

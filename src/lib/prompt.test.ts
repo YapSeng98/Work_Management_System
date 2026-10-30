@@ -17,3 +17,14 @@ describe("saved prompt helpers", () => {
     expect(PROMPT_TEMPLATE).not.toMatch(/@|\b\d{7,}\b/);
   });
 });
+
+import { parseBrief } from "./brief";
+describe("the data section's own example", () => {
+  it("is valid JSON the app reads, with every new field", () => {
+    const b = parseBrief(AI_INSTRUCTIONS);
+    expect(b.format).toBe("json");
+    expect(b.items).toHaveLength(1);
+    expect(AI_INSTRUCTIONS).toMatch(/"action_confidence"/);
+    expect(AI_INSTRUCTIONS).toMatch(/"waiting_on_team"/);
+  });
+});

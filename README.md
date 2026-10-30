@@ -96,9 +96,11 @@ as it's pasted and saved to the `briefs` table. These layouts are understood, tr
    badge, owner from its Owner field) and *Completed / no longer my action* (→ Completed;
    offers "Mark done in Planner" when a Planner task is still open). Your name is read from
    the brief ("Required Action From …") to tell your Top-10 rows from colleagues'.
-3. **Priority report** — Critical / High / Medium / Other pending actions, Waiting on
-   customer, Decisions Support summary, support-ticket summary, meetings and a Top 5
-   list (used when the AI leaves out the JSON).
+3. **Priority report** — Critical / High / Medium / Other pending actions, Emails requiring
+   my reply, Possible actions requiring verification, Waiting on customer, Waiting on team,
+   Decisions Support summary, support-ticket summary, meetings (lines or Title/Time blocks)
+   and a Top 5 list (used when the AI leaves out the JSON). Each item keeps its email trail:
+   subject, last sender, last received, folder, To/CC, age, and action confidence.
 4. **Executive Work Brief** — the earlier `=====`-divided report (Requires my response,
    Escalations, Open support incidents, UAT tracker, Customer follow-up, Risks, Top 10,
    Personal attention). Tables pasted as tab-separated text are reconstructed, and every
@@ -107,6 +109,8 @@ as it's pasted and saved to the `briefs` table. These layouts are understood, tr
 
 Items are grouped as:
 
+- **Possible — verify first** — "possible" actions (ownership unclear), kept out of
+  *Pending you* until checked.
 - **Pending you** — items where the next move is yours, ranked by priority tag,
   the brief's Top 5, and deadline wording ("EOD", "ASAP", "end of week").
 - **Waiting on others** — items in "Waiting for Customer" or whose action is to chase / track sign-off.

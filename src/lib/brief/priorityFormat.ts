@@ -17,12 +17,29 @@ export function looksLikePriorityBrief(text: string) {
   return /critical actions/i.test(text) && /(high priority actions|waiting on customer|other pending actions)/i.test(text);
 }
 
-type Section = "summary" | "critical" | "high" | "medium" | "other" | "waiting" | "decisions" | "support" | "meetings" | "top" | "ignore";
+type Section =
+  | "summary"
+  | "replies"
+  | "critical"
+  | "high"
+  | "medium"
+  | "other"
+  | "possible"
+  | "waiting"
+  | "team"
+  | "decisions"
+  | "support"
+  | "meetings"
+  | "top"
+  | "ignore";
 
 function sectionOf(line: string): Section | null {
   if (/[:\t|]/.test(line) || line.length > 80) return null;
   const t = line.replace(/^[^A-Za-z0-9]+/, "").trim().toLowerCase();
   if (/^executive summary( table)?$/.test(t)) return "summary";
+  if (/^emails? requiring (my )?reply$/.test(t)) return "replies";
+  if (/^possible actions?\b/.test(t)) return "possible";
+  if (/^waiting on (the )?team\b/.test(t)) return "team";
   if (/^critical actions?$/.test(t)) return "critical";
   if (/^high priority actions?$/.test(t)) return "high";
   if (/^medium priority actions?$/.test(t)) return "medium";
@@ -36,7 +53,7 @@ function sectionOf(line: string): Section | null {
   return null;
 }
 
-const SECTION_PRIORITY: Partial<Record<Section, Priority>> = { critical: "critical", high: "high", medium: "medium", other: "low", waiting: "low" };
+const SECTION_PRIORITY: Partial<Record<Section, Priority>> = { critical: "critical", high: "high", medium: "medium", other: "low", possible: "low", waiting: "low", team: "low" };
 const FIELD_RE = /^([A-Za-z][A-Za-z ?/'()&-]{1,48}?)\s*:\s*(.*)$/;
 const IGNORE_VALUE = /^(not stated|n\/a|none|tbd|unknown|-)\.?$/i;
 const ME_RE = /^(me|myself|you|chung)\b/i;
@@ -58,29 +75,31 @@ export function parsePriorityBrief(text: string): ParsedBrief {
   };
   const start = (t?: string) => {
     flush();
-    const owner: Owner = section === "waiting" ? "others" : "me";
+    const owner: Owner = section === "waiting" ? "others" : section === "team" ? "team" : "me";
     entry = {
       text: t ?? "",
       title: t?.replace(/^\d+[.)]\s*/, ""),
       titleWeight: 2,
       fields: 0,
       owner,
-      kind: owner === "others" ? "follow_up" : "action",
+      kind: owner === "me" ? "action" : "follow_up",
       priority: SECTION_PRIORITY[section!] ?? "medium",
       escalation: section === "critical" || undefined,
-      reason: owner === "others" ? "Waiting on customer" : "Needs your action",
+      possible: section === "possible" ? true : owner === "me" ? false : undefined,
+      reason: owner === "others" ? "Waiting on customer" : owner === "team" ? "Waiting on your team" : section === "possible" ? "Possible action — verify ownership" : "Needs your action",
     };
   };
   const field = (rawName: string, value: string) => {
     const name = rawName.toLowerCase().trim();
     const v = value.trim();
-    if (name === "subject" && (!entry || entry.hasSubject)) start(v); // a new "Subject:" starts the next item
+    const isSubject = name === "subject" || name === "email subject";
+    if (isSubject && (!entry || entry.hasSubject)) start(v); // a new "Subject:" starts the next item
     if (!entry) start();
     const e = entry!;
     e.fields++;
     if (!v || IGNORE_VALUE.test(v)) return;
     const note = (s: string) => (e.summary = e.summary ? `${e.summary} — ${s}` : s);
-    if (name === "subject") {
+    if (isSubject) {
       e.hasSubject = true;
       e.subject ??= v;
       e.text += ` ${v}`;
@@ -88,24 +107,41 @@ export function parsePriorityBrief(text: string): ParsedBrief {
       if (!e.title) e.title = v;
       else if (e.title !== v) note(v);
     } else if (/^(customer|customer\/system|system)$/.test(name)) e.customer = v;
-    else if (/^(ticket|ticket number|incident|incident number)$/.test(name)) e.text += ` ${v}`;
+    else if (/^(ticket|ticket number|incident|incident number|ticket\/incident)$/.test(name)) e.text += ` ${v}`;
+    else if (name === "action confidence") e.possible = /possible/i.test(v);
+    else if (name === "last sender") e.from = v;
+    else if (name === "last received") e.lastReceived = v;
+    else if (/^(source )?folder$/.test(name)) e.source = v;
+    else if (name === "recipient type") e.recipientType = /cc/i.test(v) ? "cc" : /to/i.test(v) ? "to" : undefined;
+    else if (/^suggested (reply|action)$/.test(name)) e.suggestedReply = v;
+    else if (/^(expected next event|last update|waiting for)$/.test(name)) note(`${rawName.trim()}: ${v}`);
     else if (/status/.test(name)) e.status = v;
     else if (/^why/.test(name)) note(v);
     else if (/^(required|next) action/.test(name)) e.action = v;
     else if (/^due/.test(name)) e.dueText = v;
     else if (/^risk/.test(name)) note(`Risk if delayed: ${v}`);
-    else if (/^(owner|current owner)$/.test(name)) e.ownerName = v;
+    else if (/^(owner|current owner)$/.test(name)) {
+      e.ownerName = v;
+      if (section === "team") e.reason = `Waiting on ${v}`;
+    }
     else if (/^waiting on/.test(name)) note(`Waiting on: ${v}`);
     else if (/^category$/.test(name)) e.stage = v;
     else note(`${rawName.trim()}: ${v}`);
   };
 
+  let meeting: { title?: string; when?: string; notes: string[] } | null = null;
+  const flushMeeting = () => {
+    if (meeting?.title) meetings.push({ id: hashId("m:" + meeting.title), when: meeting.when ?? "", title: meeting.title });
+    meeting = null;
+  };
+
   for (const line of lines) {
-    if (!line || /^=+$/.test(line) || /^```/.test(line)) continue;
+    if (!line || /^[=-]{5,}$/.test(line) || /^```/.test(line)) continue;
     if (line.startsWith("{")) section = "ignore"; // the JSON block, when present, is read elsewhere
     const next = sectionOf(line);
     if (next) {
       flush();
+      flushMeeting();
       section = next;
       table.reset();
       continue;
@@ -120,11 +156,37 @@ export function parsePriorityBrief(text: string): ParsedBrief {
         }
         break;
 
+      case "replies":
+        // Emails requiring my reply: rows merge into the matching item (by subject / ticket)
+        for (const row of table.read(line)) {
+          const subj = row.subject ?? "";
+          if (!subj) continue;
+          merger.add({
+            text: subj,
+            title: subj,
+            titleWeight: 0.5,
+            passing: true,
+            subject: subj,
+            from: row["last sender"],
+            source: row.folder,
+            summary: row["why reply needed"],
+            action: row["suggested action"],
+            replyRequired: true,
+            kind: "reply",
+            owner: "me",
+            priority: "medium",
+            reason: "Reply expected from you",
+          });
+        }
+        break;
+
       case "critical":
       case "high":
       case "medium":
       case "other":
-      case "waiting": {
+      case "possible":
+      case "waiting":
+      case "team": {
         const f = line.match(FIELD_RE);
         if (f && !/^(re|fw|fwd)$/i.test(f[1]) && f[1].split(/\s+/).length <= 6) field(f[1], f[2]);
         else if (/^\d+[.)]\s+/.test(line) || !(line.endsWith(".") && line.length > 40)) start(line);
@@ -157,6 +219,15 @@ export function parsePriorityBrief(text: string): ParsedBrief {
         break;
 
       case "meetings": {
+        const mf = line.match(FIELD_RE);
+        if (mf && /^(meeting title|title|meeting|time|when|required (preparation|decision|follow-?up))$/i.test(mf[1].trim())) {
+          const name = mf[1].trim().toLowerCase();
+          if (/title|^meeting$/.test(name)) {
+            flushMeeting();
+            meeting = { title: mf[2].trim(), notes: [] };
+          } else if (meeting && /^(time|when)$/.test(name)) meeting.when = mf[2].trim();
+          break;
+        }
         const m = line.replace(/^\d+[.)]\s*/, "");
         if (m.length > 3) {
           const time = m.match(/\b\d{1,2}[:.]\d{2}\s*(am|pm)?\b|\b\d{1,2}\s*(am|pm)\b/i)?.[0] ?? "";
@@ -173,6 +244,7 @@ export function parsePriorityBrief(text: string): ParsedBrief {
     }
   }
   flush();
+  flushMeeting();
 
   const items: BriefItem[] = merger.items
     .filter((a) => a.title)
@@ -199,6 +271,13 @@ export function parsePriorityBrief(text: string): ParsedBrief {
         owner,
         ownerReason: vote?.reason || a.reasons[0] || "Needs your action",
         ownerName: owner === "team" ? a.ownerName : undefined,
+        from: a.from.join(", ") || undefined,
+        source: a.source,
+        possible: (owner === "me" && a.possible) || undefined,
+        recipientType: a.recipientType,
+        lastReceived: a.lastReceived,
+        replyRequired: a.replyRequired || undefined,
+        suggestedReply: a.suggestedReply,
         topRank: a.topRank,
         due,
         escalation: a.escalation || undefined,

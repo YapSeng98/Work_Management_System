@@ -29,7 +29,8 @@ export function BriefView({
 }) {
   const shared = { statusOf, sinceOf, onTake, onDismiss, briefTitle: brief.title };
   const visible = brief.items.filter((i) => !hidden(i.id));
-  const mine = visible.filter((i) => i.owner === "me");
+  const mine = visible.filter((i) => i.owner === "me" && !i.possible);
+  const toVerify = visible.filter((i) => i.owner === "me" && i.possible);
   const team = visible.filter((i) => i.owner === "team");
   const chase = visible.filter((i) => i.owner === "others");
   const fyi = visible.filter((i) => i.owner === "fyi" && !i.completed);
@@ -43,6 +44,7 @@ export function BriefView({
           { value: String(doToday), label: "to do today", accent: true },
           { value: String(mine.length), label: "pending you" },
           ...(carried.length ? [{ value: String(carried.length), label: "carried over" }] : []),
+          ...(toVerify.length ? [{ value: String(toVerify.length), label: "to verify" }] : []),
           ...(team.length ? [{ value: String(team.length), label: "owned by your team" }] : []),
           { value: String(chase.length), label: "waiting on others" },
           ...(brief.meetings.length ? [{ value: String(brief.meetings.length), label: "meetings" }] : []),
@@ -84,6 +86,16 @@ export function BriefView({
         empty="Nothing pending you. 🎉"
         {...shared}
       />
+      {toVerify.length > 0 && (
+        <ItemList
+          icon={<FlagIcon size={15} />}
+          label="Possible — verify first"
+          hint="You're involved but ownership isn't explicit. Check before taking."
+          items={toVerify}
+          empty=""
+          {...shared}
+        />
+      )}
       {carried.length > 0 && (
         <Card>
           <SectionHeader

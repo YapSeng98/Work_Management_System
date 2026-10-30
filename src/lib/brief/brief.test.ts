@@ -279,3 +279,55 @@ describe("item ids are the same whichever layout a thread came from", () => {
     expect(a).toBe(b);
   });
 });
+
+import traceable from "./fixtures/traceable.txt?raw";
+import traceableJson from "./fixtures/traceable-json.txt?raw";
+
+describe("traceable brief (action confidence, emails requiring reply, waiting on team)", () => {
+  describe("report text only", () => {
+    const b = parseBrief(traceable);
+    it("is read as a priority report with all six counts", () => {
+      expect(b.format).toBe("priority");
+      expect(b.counts.map((c) => c.label)).toContain("Waiting On Team");
+    });
+    it("keeps the email trail on each item", () => {
+      expect(find(b, "Payroll export outage")).toMatchObject({
+        owner: "me",
+        priority: "critical",
+        subject: "RE: INC0011111 Payroll export failing",
+        from: "Priya Nair",
+        lastReceived: "2026-10-30 07:40",
+        source: "Support folder",
+        recipientType: "to",
+        suggestedReply: "Hotfix is ready; deploying at 11:00, confirmation by 12:00.",
+        replyRequired: true, // also in "Emails requiring my reply" — merged, not duplicated
+        topRank: 1,
+      });
+      expect(b.items.filter((i) => i.refs.includes("INC0011111"))).toHaveLength(1);
+      expect(find(b, "Approve release 4.2 cut-over plan")).toMatchObject({ replyRequired: true, topRank: 2, possible: undefined });
+    });
+    it("keeps possible actions apart, and files waiting-on-customer / team", () => {
+      expect(find(b, "Vendor licence renewal")).toMatchObject({ owner: "me", possible: true, recipientType: "cc" });
+      expect(b.items.find((i) => i.refs.includes("INC0055555"))?.owner).toBe("others");
+      expect(b.items.find((i) => i.refs.includes("INC0077777"))).toMatchObject({ owner: "team", ownerName: "Alex Lim" });
+    });
+    it("reads meetings written as Title / Time blocks", () => {
+      expect(b.meetings.map((m) => `${m.when} ${m.title}`)).toEqual(["10:00 AM Release 4.2 go/no-go", "2:30 PM Payroll incident review"]);
+    });
+  });
+
+  describe("with the full JSON", () => {
+    const b = parseBrief(traceableJson);
+    it("maps the traceability fields", () => {
+      const payroll = b.items.find((i) => i.refs.includes("INC0011111"))!;
+      expect(payroll).toMatchObject({ from: "Priya Nair", source: "Support folder", recipientType: "to", ageHours: 5, replyRequired: true, kind: "action", topRank: 1 });
+      expect(b.items.find((i) => i.title.startsWith("Confirm who owns"))).toMatchObject({ possible: true, recipientType: "cc", ageHours: 30 });
+      expect(b.items.find((i) => i.refs.includes("INC0077777"))).toMatchObject({ owner: "team", ownerName: "Alex Lim" });
+      expect(b.counts.map((c) => c.label)).toContain("Waiting on team");
+    });
+    it("same ids as the text-only version", () => {
+      const ids = new Set(parseBrief(traceable).items.map((i) => i.id));
+      for (const i of b.items.filter((x) => x.refs.length || x.subject)) expect(ids.has(i.id), i.title).toBe(true);
+    });
+  });
+});

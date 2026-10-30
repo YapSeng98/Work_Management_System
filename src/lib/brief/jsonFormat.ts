@@ -82,12 +82,17 @@ export function parseJsonBrief(data: Record<string, unknown>, fallbackDate?: Dat
   const items: BriefItem[] = rawItems
     .filter((x): x is Record<string, unknown> => !!x && typeof x === "object")
     .map((x) => {
-      const title = str(x.title) ?? str(x.subject) ?? "Untitled item";
+      const subject = str(x.subject) ?? str(x.email_subject);
+      const title = str(x.title) ?? subject ?? "Untitled item";
       // "tickets" may come back as a list or as one string ("INC1, SR2")
       const tickets = (Array.isArray(x.tickets) ? x.tickets.map(String) : (str(x.tickets) ?? "").split(/[,;\s]+/)).filter(Boolean);
-      const refs = [...new Set([...tickets, ...refsIn(`${title} ${str(x.subject) ?? ""}`)])];
+      const refs = [...new Set([...tickets, ...refsIn(`${title} ${subject ?? ""} ${str(x.ticket) ?? ""}`)])];
       const type = str(x.type)?.toLowerCase();
-      const kind: ItemKind = KINDS.includes(type as ItemKind) ? (type as ItemKind) : "action";
+      const replyRequired = x.reply_required === true || x.reply_required === "true";
+      const kind: ItemKind = KINDS.includes(type as ItemKind) ? (type as ItemKind) : replyRequired ? "reply" : "action";
+      const possible = /^possible/i.test(str(x.action_confidence) ?? "");
+      const recipient = str(x.recipient_type)?.toLowerCase();
+      const age = Number(x.email_age_hours);
       const { owner, reason } = ownerOf(waitingOnOf(x), type);
       const priority = toPriority(x.urgency) ?? priorityOf(x.priority) ?? "medium";
       const risk = toPriority(x.risk); // a level; free text ("Risk if delayed") goes to the summary
@@ -101,21 +106,26 @@ export function parseJsonBrief(data: Record<string, unknown>, fallbackDate?: Dat
       const since = isoDay(x.waiting_since);
       const { score, quadrant } = rankItem({ priority, owner, kind, due, topRank, escalation });
       return {
-        id: itemId(refs, str(x.subject) ?? title),
-        subject: str(x.subject),
+        id: itemId(refs, subject ?? title),
+        subject,
+        possible: possible || undefined,
+        recipientType: recipient === "cc" || recipient === "to" ? recipient : undefined,
+        lastReceived: str(x.last_received),
+        ageHours: x.email_age_hours != null && Number.isFinite(age) && age >= 0 ? age : undefined,
+        replyRequired: replyRequired || undefined,
         kind,
         priority,
         title,
-        from: str(x.from),
+        from: str(x.from) ?? str(x.last_sender),
         customer: str(x.customer),
         summary:
-          [str(x.subject) && str(x.subject) !== title ? str(x.subject) : undefined, str(x.why), riskText && `Risk if delayed: ${riskText}`]
+          [subject && subject !== title ? subject : undefined, str(x.why), riskText && `Risk if delayed: ${riskText}`]
             .filter(Boolean)
             .join(" — ") || undefined,
         status: str(x.status),
         action: str(x.next_action) ?? str(x.required_action),
         category: str(x.category),
-        source: str(x.source),
+        source: str(x.source) ?? str(x.folder),
         stage: str(x.stage),
         refs,
         owner,

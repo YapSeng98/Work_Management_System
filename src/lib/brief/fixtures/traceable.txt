@@ -1,0 +1,124 @@
+# Daily Work Brief – 30 Oct 2026
+
+All names, tickets and emails in this file are made up.
+
+## Executive Summary
+
+| Priority | Count | Description |
+|---|---:|---|
+| 🚨 Critical | 1 | Incidents / Escalations |
+| 🔴 High | 1 | RCA / Deployments / UAT / Commitments |
+| 🟠 Medium | 0 | Support Tickets / Project Actions |
+| 🟡 Normal | 0 | Other Actions |
+| 🟢 Waiting On Customer | 1 | Monitoring |
+| 🔵 Waiting On Team | 1 | Monitoring |
+
+--------------------------------------------------
+
+## Emails Requiring My Reply
+
+| Age | Subject | Last Sender | Folder | Why Reply Needed | Suggested Action |
+|------|----------|------------|----------|-----------------|-----------------|
+| 5h | RE: INC0011111 Payroll export failing | Priya Nair | Support folder | Customer asked for an ETA | Send ETA for the hotfix |
+| 2d | Release 4.2 cut-over plan | Omar Haddad | Inbox | Approval requested | Approve or comment on the plan |
+
+--------------------------------------------------
+
+## 🚨 Critical Actions
+
+### 1. Payroll export outage
+
+Action Confidence: Confirmed
+Email Subject: RE: INC0011111 Payroll export failing
+Ticket/Incident: INC0011111
+Last Sender: Priya Nair
+Last Received: 2026-10-30 07:40
+Source Folder: Support folder
+Recipient Type: TO
+Customer/System: Acme Health / Payroll
+Latest Status: Third failure overnight; customer escalated.
+Why It Needs My Action: I own the payroll interface fix.
+Required Action: Deploy the hotfix and send the ETA.
+Suggested Reply: Hotfix is ready; deploying at 11:00, confirmation by 12:00.
+Due Date: Today
+Risk If Delayed: Payroll for 3,000 staff is delayed.
+
+--------------------------------------------------
+
+## 🔴 High Priority Actions
+
+### 2. Approve release 4.2 cut-over plan
+
+Action Confidence: Confirmed
+Email Subject: Release 4.2 cut-over plan
+Ticket/Incident: n/a
+Last Sender: Omar Haddad
+Last Received: 2026-10-28 16:05
+Source Folder: Inbox
+Recipient Type: TO
+Customer/System: Globex
+Latest Status: Plan circulated for approval.
+Why It Needs My Action: My approval is requested.
+Required Action: Approve or comment.
+Suggested Reply: Approved, with one change to the rollback window.
+Due Date: 2026-10-31
+Risk If Delayed: Go-live slips a week.
+
+--------------------------------------------------
+
+## Possible Actions Requiring Verification
+
+### Vendor licence renewal
+
+Action Confidence: Possible
+Email Subject: FW: Licence renewal reminder
+Last Sender: Vendor Desk
+Source Folder: Inbox
+Recipient Type: CC
+Why It Needs My Action: I am copied; owner unclear.
+Required Action: Confirm who owns the renewal.
+
+--------------------------------------------------
+
+## 🟢 Waiting On Customer
+
+Subject: INC0055555: Data correction batch
+Customer: Acme Health
+Last Update: Fix delivered 28 Oct.
+Current Status: Waiting for customer confirmation.
+Waiting On: Customer
+Expected Next Event: Confirmation by Monday.
+
+--------------------------------------------------
+
+## 🔵 Waiting On Team
+
+Subject: INC0077777: Login errors for Globex users
+Current Owner: Alex Lim
+Last Update: Investigation started 29 Oct.
+Waiting For: Root cause from Alex
+Expected Next Event: Findings by Friday.
+
+--------------------------------------------------
+
+## Meetings & Approvals Requiring My Attention Today
+
+Meeting Title: Release 4.2 go/no-go
+Time: 10:00 AM
+Required Preparation: Bring the cut-over checklist.
+Required Decision: Go / no-go.
+
+Meeting Title: Payroll incident review
+Time: 2:30 PM
+Required Follow-up: Send the RCA outline.
+
+--------------------------------------------------
+
+## Top 5 Recommended Actions For Today
+
+1. Deploy the payroll hotfix (INC0011111)
+   - Reason for ranking: Production incident with escalation.
+   - Estimated business impact: Payroll for 3,000 staff.
+   - What happens if ignored: Customer escalation to management.
+2. Approve the release 4.2 cut-over plan
+   - Reason for ranking: Go-live dependency.

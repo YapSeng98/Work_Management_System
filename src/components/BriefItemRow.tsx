@@ -75,6 +75,16 @@ export function BriefItemRow({
           {item.changedToday && <Pill dot label="Changed today" bg="var(--accent-tint)" color="var(--accent)" />}
           {item.engagement && <Pill label="Engagement" bg="var(--schedule-bg)" color="var(--schedule-text)" />}
           {item.completed && <Pill dot label="Completed" bg="var(--later-bg)" color="var(--success)" />}
+          {item.possible && <Pill dot label="Verify first" bg="var(--badge-warn-bg)" color="var(--badge-warn-text)" />}
+          {item.replyRequired && <Pill label="Reply needed" bg="var(--schedule-bg)" color="var(--schedule-text)" />}
+          {item.recipientType === "cc" && <Pill label="CC only" bg="var(--later-bg)" color="var(--later-text)" />}
+          {item.ageHours !== undefined && (
+            <Pill
+              label={item.ageHours < 24 ? `${Math.round(item.ageHours)}h old` : `${Math.round(item.ageHours / 24)}d old`}
+              bg={item.ageHours >= 72 ? "var(--badge-warn-bg)" : "var(--divider)"}
+              color={item.ageHours >= 72 ? "var(--badge-warn-text)" : "var(--text-muted)"}
+            />
+          )}
           {status === "done" && <Pill label="Done before" bg="var(--later-bg)" color="var(--later-text)" />}
         </div>
 
@@ -88,6 +98,7 @@ export function BriefItemRow({
             kindLabel[item.kind],
             item.stage && cap(item.stage),
             item.source && `via ${item.source}`,
+            item.lastReceived && `received ${item.lastReceived.replace("T", " ").slice(0, 16)}`,
             item.ownerName && item.ownerReason.startsWith("Owned by") ? undefined : item.ownerReason,
           ]
             .filter(Boolean)
